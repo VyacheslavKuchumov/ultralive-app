@@ -70,7 +70,7 @@ Defaults in `server/.env`:
 - `PORT=:8000`
 - `DB_HOST=127.0.0.1`
 - `DB_PORT=5433`
-- `DB_NAME=task_tracker`
+- `DB_NAME=ultralive_crm`
 - `JWT_SECRET=CHANGE_ME`
 
 ### 3. Apply migrations

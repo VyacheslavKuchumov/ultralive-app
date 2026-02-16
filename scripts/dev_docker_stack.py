@@ -17,15 +17,15 @@ from pathlib import Path
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 
-NETWORK_NAME = "task_tracker_standalone_net"
-POSTGRES_CONTAINER = "task_tracker_standalone_postgres"
-MIGRATOR_CONTAINER = "task_tracker_standalone_migrator"
-SERVER_CONTAINER = "task_tracker_standalone_server"
-WEB_CONTAINER = "task_tracker_standalone_web"
-POSTGRES_VOLUME = "task_tracker_standalone_postgres_data"
+NETWORK_NAME = "ultralive_standalone_net"
+POSTGRES_CONTAINER = "ultralive_standalone_postgres"
+MIGRATOR_CONTAINER = "ultralive_standalone_migrator"
+SERVER_CONTAINER = "ultralive_standalone_server"
+WEB_CONTAINER = "ultralive_standalone_web"
+POSTGRES_VOLUME = "ultralive_standalone_postgres_data"
 
-SERVER_IMAGE = "task-tracker-dev-server:local"
-WEB_IMAGE = "task-tracker-dev-web:local"
+SERVER_IMAGE = "ultralive-dev-server:local"
+WEB_IMAGE = "ultralive-dev-web:local"
 POSTGRES_IMAGE = "postgres:16-alpine"
 
 
@@ -131,7 +131,7 @@ def wait_for_postgres(timeout_sec: int = 45) -> None:
     deadline = time.time() + timeout_sec
     while time.time() < deadline:
         result = run(
-            ["docker", "exec", POSTGRES_CONTAINER, "pg_isready", "-U", "postgres", "-d", "task_tracker"],
+            ["docker", "exec", POSTGRES_CONTAINER, "pg_isready", "-U", "postgres", "-d", "ultralive_crm"],
             check=False,
             capture=True,
         )
@@ -161,7 +161,7 @@ def run_migrations() -> None:
             "-e",
             "DB_PORT=5432",
             "-e",
-            "DB_NAME=task_tracker",
+            "DB_NAME=ultralive_crm",
             "-e",
             "DB_SSLMODE=disable",
             "-e",
@@ -222,7 +222,7 @@ def up(args: argparse.Namespace) -> None:
                 "-e",
                 "POSTGRES_PASSWORD=postgres",
                 "-e",
-                "POSTGRES_DB=task_tracker",
+                "POSTGRES_DB=ultralive_crm",
                 "-p",
                 f"{ports.postgres}:5432",
                 "-v",
@@ -259,7 +259,7 @@ def up(args: argparse.Namespace) -> None:
                 "-e",
                 "DB_PORT=5432",
                 "-e",
-                "DB_NAME=task_tracker",
+                "DB_NAME=ultralive_crm",
                 "-e",
                 "DB_SSLMODE=disable",
                 "-e",
@@ -308,7 +308,7 @@ def up(args: argparse.Namespace) -> None:
     print("\nStandalone dev stack is running:")
     print(f"- Frontend: http://localhost:{ports.web}")
     print(f"- Backend:  http://localhost:{ports.server}")
-    print(f"- Postgres: localhost:{ports.postgres} (postgres/postgres, db=task_tracker)")
+    print(f"- Postgres: localhost:{ports.postgres} (postgres/postgres, db=ultralive_crm)")
     print("\nUseful commands:")
     print(f"- docker logs -f {SERVER_CONTAINER}")
     print(f"- docker logs -f {WEB_CONTAINER}")
@@ -352,7 +352,7 @@ def status(_: argparse.Namespace) -> None:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Run Task Tracker dev stack in separate Docker containers.")
+    parser = argparse.ArgumentParser(description="Run Ultralive CRM dev stack in separate Docker containers.")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     up_parser = subparsers.add_parser("up", help="Build and start standalone dev containers.")
