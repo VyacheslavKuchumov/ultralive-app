@@ -1,0 +1,7 @@
+.git
+.gitignore
+.vscode
+bin
+README.md
+LICENSE
+*.log

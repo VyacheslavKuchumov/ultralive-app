@@ -1,0 +1,3 @@
+DROP TABLE IF EXISTS warehouses;
+DROP TABLE IF EXISTS project_types;
+DROP TABLE IF EXISTS set_types;

@@ -1,0 +1,126 @@
+services:
+  traefik:
+    image: traefik:v3.6.8
+    container_name: task_tracker_traefik
+    restart: unless-stopped
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --certificatesresolvers.letsencrypt.acme.tlschallenge=true
+      - --certificatesresolvers.letsencrypt.acme.email=${TRAEFIK_ACME_EMAIL:?set in .env}
+      - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik_letsencrypt:/letsencrypt
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: task_tracker_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-task_tracker}
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-task_tracker}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  migrate:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: task_tracker_migrate
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_USER: ${POSTGRES_USER:-postgres}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?set in .env}
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${POSTGRES_DB:-task_tracker}
+      DB_SSLMODE: disable
+      JWT_EXP: 604800
+      JWT_SECRET: ${JWT_SECRET:?set in .env}
+    command: ["app-migrate", "up"]
+
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: task_tracker_server
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      PUBLIC_HOST: https://${TRAEFIK_API_HOST:-home-server.vyachik-dev.ru}
+      PORT: :8000
+      DB_USER: ${POSTGRES_USER:-postgres}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?set in .env}
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${POSTGRES_DB:-task_tracker}
+      DB_SSLMODE: disable
+      JWT_EXP: 604800
+      JWT_SECRET: ${JWT_SECRET:?set in .env}
+    command: ["server"]
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.task-tracker-api.rule=Host(`${TRAEFIK_API_HOST:-home-server.vyachik-dev.ru}`)
+      - traefik.http.routers.task-tracker-api.entrypoints=websecure
+      - traefik.http.routers.task-tracker-api.tls=true
+      - traefik.http.routers.task-tracker-api.tls.certresolver=letsencrypt
+      - traefik.http.services.task-tracker-api.loadbalancer.server.port=8000
+      - traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https
+      - traefik.http.routers.task-tracker-api-http.rule=Host(`${TRAEFIK_API_HOST:-home-server.vyachik-dev.ru}`)
+      - traefik.http.routers.task-tracker-api-http.entrypoints=web
+      - traefik.http.routers.task-tracker-api-http.middlewares=redirect-to-https
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    container_name: task_tracker_web
+    restart: unless-stopped
+    depends_on:
+      server:
+        condition: service_started
+    environment:
+      BACKEND_URL: http://server:8000
+      NUXT_BACKEND_URL: http://server:8000
+      NODE_ENV: production
+      NITRO_HOST: 0.0.0.0
+      NITRO_PORT: 3000
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.task-tracker-web.rule=Host(`${TRAEFIK_WEB_HOST:-home.vyachik-dev.ru}`)
+      - traefik.http.routers.task-tracker-web.entrypoints=websecure
+      - traefik.http.routers.task-tracker-web.tls=true
+      - traefik.http.routers.task-tracker-web.tls.certresolver=letsencrypt
+      - traefik.http.services.task-tracker-web.loadbalancer.server.port=3000
+      - traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https
+      - traefik.http.routers.task-tracker-web-http.rule=Host(`${TRAEFIK_WEB_HOST:-home.vyachik-dev.ru}`)
+      - traefik.http.routers.task-tracker-web-http.entrypoints=web
+      - traefik.http.routers.task-tracker-web-http.middlewares=redirect-to-https
+
+volumes:
+  postgres_data:
+  traefik_letsencrypt:
