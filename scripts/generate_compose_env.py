@@ -32,6 +32,7 @@ def build_env_text(args: argparse.Namespace) -> str:
         "",
         f"POSTGRES_USER={args.postgres_user}",
         f"POSTGRES_DB={args.postgres_db}",
+        f"POSTGRES_PORT={args.postgres_port}",
         f"POSTGRES_PASSWORD={postgres_password}",
         "",
         f"JWT_SECRET={jwt_secret}",
@@ -73,6 +74,12 @@ def parse_args() -> argparse.Namespace:
         "--postgres-db",
         default="ultralive_crm",
         help="Postgres database name for the app",
+    )
+    parser.add_argument(
+        "--postgres-port",
+        type=int,
+        default=5433,
+        help="Postgres host port for docker-compose",
     )
     parser.add_argument(
         "--force",
