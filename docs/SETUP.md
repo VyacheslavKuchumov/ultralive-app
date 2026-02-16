@@ -41,7 +41,7 @@ Services:
 
 - `web` at `https://<TRAEFIK_WEB_HOST>`
 - `server` at `https://<TRAEFIK_API_HOST>`
-- `postgres` at host port `5433`
+- `postgres` at host port `POSTGRES_PORT` (default `5433`)
 
 Stop:
 
