@@ -26,8 +26,11 @@ Important: API and payload naming follow legacy style (`snake_case`) to stay com
 python3 scripts/generate_compose_env.py \
   --acme-email your-email@example.com \
   --web-host home.your-domain.tld \
-  --api-host home-server.your-domain.tld
+  --api-host home-server.your-domain.tld \
+  --postgres-port 5433
 ```
+
+Generated `.env` includes `POSTGRES_PORT` (default `5433`).
 
 ### 2. Start full stack
 
