@@ -36,7 +36,7 @@ func initConfig() Config {
 		DBPassword:             getEnv("DB_PASSWORD", "postgres"),
 		DBHost:                 getEnv("DB_HOST", "127.0.0.1"),
 		DBPort:                 getEnv("DB_PORT", "5433"),
-		DBName:                 getEnv("DB_NAME", "task_tracker"),
+		DBName:                 getEnv("DB_NAME", "ultralive_crm"),
 		DBSSLMode:              getEnv("DB_SSLMODE", "disable"),
 		JWTExpirationInSeconds: getEnvAsInt("JWT_EXP", 3600*24*7),
 		JWTSecret:              getEnv("JWT_SECRET", "CHANGE_ME"),

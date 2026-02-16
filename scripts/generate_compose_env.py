@@ -71,7 +71,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--postgres-db",
-        default="task_tracker",
+        default="ultralive_crm",
         help="Postgres database name for the app",
     )
     parser.add_argument(
