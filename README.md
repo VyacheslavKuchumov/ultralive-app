@@ -89,6 +89,47 @@ Recommended safety flow:
 - Frontend build: `cd web && npm run build`
 - E2E: `cd web && npm run test:e2e`
 
+## XMPP Release Bot (Docker)
+
+You can run a dedicated XMPP bot that accepts deploy commands (for example from Prosody account `ultralive-release-bot@vyachik-dev.ru`).
+
+Supported bot commands:
+
+- `/help`
+- `/ping`
+- `/status`
+- `/update` (runs deploy workflow: checkout main + fetch/pull + `docker compose up -d --build --remove-orphans`)
+
+### 1. Generate `.env.release-bot`
+
+```bash
+python3 scripts/generate_release_bot_env.py \
+  --jid ultralive-release-bot@vyachik-dev.ru \
+  --password 'BOT_XMPP_PASSWORD' \
+  --allowed-sender your-admin@vyachik-dev.ru \
+  --host-repo-path /opt/ultralive-app-v2
+```
+
+Notes:
+
+- `--allowed-sender` can be passed multiple times.
+- `.env.release-bot` is ignored by git.
+
+### 2. Start bot container
+
+```bash
+scripts/release_bot_stack.sh up
+```
+
+### 3. Manage bot container
+
+```bash
+scripts/release_bot_stack.sh ps
+scripts/release_bot_stack.sh logs
+scripts/release_bot_stack.sh restart
+scripts/release_bot_stack.sh down
+```
+
 ## Repository Structure
 
 - `server/`: API, services, migrations, tests
