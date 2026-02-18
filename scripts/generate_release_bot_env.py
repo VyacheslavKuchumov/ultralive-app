@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-"""Generate .env file for release XMPP bot container."""
+"""Generate .env file for release XMPP bot systemd service."""
 
 from __future__ import annotations
 
@@ -40,7 +40,6 @@ def build_env_text(args: argparse.Namespace) -> str:
         f"XMPP_RESOURCE={args.xmpp_resource}",
         f"XMPP_ALLOWED_SENDERS={','.join(allowed_senders)}",
         "",
-        f"HOST_REPO_PATH={args.host_repo_path}",
         f"REPO_PATH={args.repo_path}",
         "",
         f"DEPLOY_REMOTE={args.deploy_remote}",
@@ -79,14 +78,9 @@ def parse_args() -> argparse.Namespace:
         help="Authorized sender JID (repeat option for multiple senders)",
     )
     parser.add_argument(
-        "--host-repo-path",
-        required=True,
-        help="Absolute path to ultralive-app-v2 on VPS host",
-    )
-    parser.add_argument(
         "--repo-path",
-        default="/workspace",
-        help="Repo path inside bot container (default: /workspace)",
+        default=str(Path.cwd().resolve()),
+        help="Absolute path to ultralive-app-v2 on VPS host (default: current directory)",
     )
     parser.add_argument(
         "--xmpp-server",
