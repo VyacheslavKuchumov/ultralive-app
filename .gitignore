@@ -37,3 +37,4 @@ web/node_modules/
 web/.nuxt/
 web/.output/
 *.pyc
+/test-results

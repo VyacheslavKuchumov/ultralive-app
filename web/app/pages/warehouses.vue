@@ -2,25 +2,24 @@
   <div class="space-y-6">
     <UCard>
       <template #header>
-        <h1 class="text-xl font-semibold">Склады</h1>
+        <div class="flex items-center justify-between gap-3">
+          <h1 class="text-xl font-semibold">Склады</h1>
+          <UButton color="primary" icon="i-lucide-plus" @click="openCreate">
+            <span class="hidden sm:inline">Добавить</span>
+          </UButton>
+        </div>
       </template>
-
-      <form class="grid gap-3 sm:grid-cols-3" @submit.prevent="save">
-        <UInput v-model="form.warehouse_name" placeholder="Название склада" />
-        <UInput v-model="form.warehouse_adress" placeholder="Адрес" />
-        <UButton type="submit" color="primary">{{ form.warehouse_id ? 'Сохранить' : 'Добавить' }}</UButton>
-      </form>
     </UCard>
 
     <UCard>
       <div class="overflow-x-auto">
-        <table class="w-full text-sm">
+        <table class="w-full min-w-max text-sm">
           <thead>
-            <tr class="text-left border-b border-gray-200">
+            <tr class="text-left border-b border-gray-200 whitespace-nowrap">
               <th class="py-2">ID</th>
               <th class="py-2">Склад</th>
               <th class="py-2">Адрес</th>
-              <th class="py-2 w-40">Действия</th>
+              <th class="py-2 w-32">Действия</th>
             </tr>
           </thead>
           <tbody>
@@ -28,23 +27,47 @@
               <td class="py-2">{{ item.warehouse_id }}</td>
               <td class="py-2">{{ item.warehouse_name }}</td>
               <td class="py-2">{{ item.warehouse_adress || '-' }}</td>
-              <td class="py-2 flex gap-2">
-                <UButton size="xs" color="neutral" variant="soft" @click="edit(item)">Изменить</UButton>
-                <UButton size="xs" color="error" variant="soft" @click="remove(item.warehouse_id)">Удалить</UButton>
+              <td class="py-2">
+                <div class="flex gap-1 sm:gap-2">
+                  <UButton size="xs" color="neutral" variant="soft" icon="i-lucide-pencil" aria-label="Изменить" @click="edit(item)">
+                    <span class="hidden sm:inline">Изменить</span>
+                  </UButton>
+                  <UButton size="xs" color="error" variant="soft" icon="i-lucide-trash-2" aria-label="Удалить" @click="remove(item.warehouse_id)">
+                    <span class="hidden sm:inline">Удалить</span>
+                  </UButton>
+                </div>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
     </UCard>
+
+    <UModal v-model:open="isFormOpen" :title="form.warehouse_id ? 'Редактировать склад' : 'Добавить склад'">
+      <template #body>
+        <form class="space-y-3" @submit.prevent="save">
+          <UFormField label="Название склада" required>
+            <UInput v-model="form.warehouse_name" placeholder="Название склада" required />
+          </UFormField>
+          <UFormField label="Адрес">
+            <UInput v-model="form.warehouse_adress" placeholder="Адрес" />
+          </UFormField>
+          <div class="flex justify-end gap-2">
+            <UButton type="button" color="neutral" variant="soft" @click="isFormOpen = false">Отмена</UButton>
+            <UButton type="submit" color="primary" icon="i-lucide-save">{{ form.warehouse_id ? 'Сохранить' : 'Создать' }}</UButton>
+          </div>
+        </form>
+      </template>
+    </UModal>
   </div>
 </template>
 
 <script setup>
-import { reactive } from 'vue'
+import { reactive, ref } from 'vue'
 import { useCRMStore } from '~/stores/crm'
 
 const crm = useCRMStore()
+const isFormOpen = ref(false)
 
 const form = reactive({
   warehouse_id: null,
@@ -54,10 +77,22 @@ const form = reactive({
 
 await crm.fetchWarehouses()
 
+function resetForm() {
+  form.warehouse_id = null
+  form.warehouse_name = ''
+  form.warehouse_adress = ''
+}
+
+function openCreate() {
+  resetForm()
+  isFormOpen.value = true
+}
+
 function edit(item) {
   form.warehouse_id = item.warehouse_id
   form.warehouse_name = item.warehouse_name
   form.warehouse_adress = item.warehouse_adress || ''
+  isFormOpen.value = true
 }
 
 async function save() {
@@ -74,17 +109,15 @@ async function save() {
     await crm.createWarehouse(payload)
   }
 
-  form.warehouse_id = null
-  form.warehouse_name = ''
-  form.warehouse_adress = ''
+  resetForm()
+  isFormOpen.value = false
 }
 
 async function remove(id) {
   await crm.deleteWarehouse(id)
   if (form.warehouse_id === id) {
-    form.warehouse_id = null
-    form.warehouse_name = ''
-    form.warehouse_adress = ''
+    resetForm()
+    isFormOpen.value = false
   }
 }
 </script>

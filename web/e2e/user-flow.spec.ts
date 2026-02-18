@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Locator, type Page } from '@playwright/test'
 
 const BACKEND_URL = process.env.PLAYWRIGHT_BACKEND_URL || 'http://127.0.0.1:8000'
 
@@ -21,6 +21,26 @@ function buildUser(prefix: string): TestUser {
     email: `qa_${prefix.toLowerCase()}_${suffix}@example.com`,
     password: `Pwd_${suffix}`
   }
+}
+
+function rowsByText(page: Page, text: string): Locator {
+  return page.locator('tbody tr').filter({ hasText: text })
+}
+
+function rowByText(page: Page, text: string): Locator {
+  return rowsByText(page, text).first()
+}
+
+function equipmentSetCards(page: Page, text: string): Locator {
+  return page.locator('[data-testid^="equipment-set-card-"]').filter({ hasText: text })
+}
+
+function equipmentSetCard(page: Page, text: string): Locator {
+  return equipmentSetCards(page, text).first()
+}
+
+async function expectRowAbsent(page: Page, text: string) {
+  await expect(rowsByText(page, text)).toHaveCount(0)
 }
 
 async function waitForBackend() {
@@ -63,57 +83,348 @@ async function signUp(page: Page, user: TestUser) {
   ])
 }
 
+async function openCreateDialog(page: Page) {
+  await page.getByRole('button', { name: 'Добавить' }).first().click()
+  const dialog = page.getByRole('dialog').last()
+  await expect(dialog).toBeVisible()
+  return dialog
+}
+
+async function openEditDialog(page: Page, rowText: string) {
+  await rowByText(page, rowText).getByRole('button', { name: 'Изменить' }).click()
+  const dialog = page.getByRole('dialog').last()
+  await expect(dialog).toBeVisible()
+  return dialog
+}
+
+async function selectInDialog(page: Page, dialog: Locator, triggerText: string, optionText: string) {
+  const labelTrigger = dialog.getByLabel(triggerText).first()
+  if (await labelTrigger.count()) {
+    await labelTrigger.click()
+  } else {
+    const comboboxTrigger = dialog.getByRole('combobox', { name: triggerText }).first()
+    if (await comboboxTrigger.count()) {
+      await comboboxTrigger.click()
+    } else {
+      await dialog.locator('button').filter({ hasText: triggerText }).first().click()
+    }
+  }
+  await page.getByRole('option', { name: optionText }).first().click()
+}
+
+async function createSetType(page: Page, name: string) {
+  await page.goto('/set_types')
+  const dialog = await openCreateDialog(page)
+  await dialog.getByPlaceholder('Название вида').fill(name)
+  await dialog.getByRole('button', { name: 'Создать' }).click()
+  await expect(rowByText(page, name)).toBeVisible()
+}
+
+async function editSetType(page: Page, currentName: string, nextName: string) {
+  await page.goto('/set_types')
+  const dialog = await openEditDialog(page, currentName)
+  await dialog.getByPlaceholder('Название вида').fill(nextName)
+  await dialog.getByRole('button', { name: 'Сохранить' }).click()
+  await expect(rowByText(page, nextName)).toBeVisible()
+  await expectRowAbsent(page, currentName)
+}
+
+async function deleteSetType(page: Page, name: string) {
+  await page.goto('/set_types')
+  await rowByText(page, name).getByRole('button', { name: 'Удалить' }).click()
+  await expectRowAbsent(page, name)
+}
+
+async function createProjectType(page: Page, name: string, neaktorId: string) {
+  await page.goto('/project_types')
+  const dialog = await openCreateDialog(page)
+  await dialog.getByPlaceholder('Название площадки').fill(name)
+  await dialog.getByPlaceholder('Neaktor ID (опционально)').fill(neaktorId)
+  await dialog.getByRole('button', { name: 'Создать' }).click()
+  await expect(rowByText(page, name)).toBeVisible()
+}
+
+async function editProjectType(page: Page, currentName: string, nextName: string, neaktorId: string) {
+  await page.goto('/project_types')
+  const dialog = await openEditDialog(page, currentName)
+  await dialog.getByPlaceholder('Название площадки').fill(nextName)
+  await dialog.getByPlaceholder('Neaktor ID (опционально)').fill(neaktorId)
+  await dialog.getByRole('button', { name: 'Сохранить' }).click()
+  await expect(rowByText(page, nextName)).toBeVisible()
+  await expectRowAbsent(page, currentName)
+}
+
+async function deleteProjectType(page: Page, name: string) {
+  await page.goto('/project_types')
+  await rowByText(page, name).getByRole('button', { name: 'Удалить' }).click()
+  await expectRowAbsent(page, name)
+}
+
+async function createWarehouse(page: Page, name: string, address: string) {
+  await page.goto('/warehouses')
+  const dialog = await openCreateDialog(page)
+  await dialog.getByPlaceholder('Название склада').fill(name)
+  await dialog.getByPlaceholder('Адрес').fill(address)
+  await dialog.getByRole('button', { name: 'Создать' }).click()
+  await expect(rowByText(page, name)).toBeVisible()
+}
+
+async function editWarehouse(page: Page, currentName: string, nextName: string, address: string) {
+  await page.goto('/warehouses')
+  const dialog = await openEditDialog(page, currentName)
+  await dialog.getByPlaceholder('Название склада').fill(nextName)
+  await dialog.getByPlaceholder('Адрес').fill(address)
+  await dialog.getByRole('button', { name: 'Сохранить' }).click()
+  await expect(rowByText(page, nextName)).toBeVisible()
+  await expectRowAbsent(page, currentName)
+}
+
+async function deleteWarehouse(page: Page, name: string) {
+  await page.goto('/warehouses')
+  await rowByText(page, name).getByRole('button', { name: 'Удалить' }).click()
+  await expectRowAbsent(page, name)
+}
+
+async function createDraft(page: Page, name: string) {
+  await page.goto('/drafts')
+  const dialog = await openCreateDialog(page)
+  await dialog.getByPlaceholder('Название шаблона').fill(name)
+  await dialog.getByRole('button', { name: 'Создать' }).click()
+  await expect(rowByText(page, name)).toBeVisible()
+}
+
+async function editDraft(page: Page, currentName: string, nextName: string) {
+  await page.goto('/drafts')
+  const dialog = await openEditDialog(page, currentName)
+  await dialog.getByPlaceholder('Название шаблона').fill(nextName)
+  await dialog.getByRole('button', { name: 'Сохранить' }).click()
+  await expect(rowByText(page, nextName)).toBeVisible()
+  await expectRowAbsent(page, currentName)
+}
+
+async function deleteDraft(page: Page, name: string) {
+  await page.goto('/drafts')
+  await rowByText(page, name).getByRole('button', { name: 'Удалить' }).click()
+  await expectRowAbsent(page, name)
+}
+
+async function createEquipmentSet(page: Page, name: string, description: string, setTypeName: string) {
+  await page.goto('/equipment_sets')
+  const dialog = await openCreateDialog(page)
+  await dialog.getByPlaceholder('Название комплекта').fill(name)
+  await dialog.getByPlaceholder('Описание').fill(description)
+  await selectInDialog(page, dialog, 'Вид комплекта', setTypeName)
+  await dialog.getByRole('button', { name: 'Создать' }).click()
+  await expect(equipmentSetCard(page, name)).toBeVisible()
+}
+
+async function editEquipmentSet(page: Page, currentName: string, nextName: string, description: string) {
+  await page.goto('/equipment_sets')
+  await equipmentSetCard(page, currentName).getByRole('button', { name: 'Изменить' }).click()
+  const dialog = page.getByRole('dialog').last()
+  await expect(dialog).toBeVisible()
+  await dialog.getByPlaceholder('Название комплекта').fill(nextName)
+  await dialog.getByPlaceholder('Описание').fill(description)
+  await dialog.getByRole('button', { name: 'Сохранить' }).click()
+  await expect(equipmentSetCard(page, nextName)).toBeVisible()
+  await expect(equipmentSetCards(page, currentName)).toHaveCount(0)
+}
+
+async function deleteEquipmentSet(page: Page, name: string) {
+  await page.goto('/equipment_sets')
+  await equipmentSetCard(page, name).getByRole('button', { name: 'Удалить' }).click()
+  await expect(equipmentSetCards(page, name)).toHaveCount(0)
+}
+
+async function openEquipmentSet(page: Page, equipmentSetName: string) {
+  await page.goto('/equipment_sets')
+  await equipmentSetCard(page, equipmentSetName).getByRole('link', { name: 'Открыть комплект' }).click()
+  await expect(page).toHaveURL(/\/equipment\?set=\d+/)
+}
+
+async function createEquipment(page: Page, name: string, serial: string, equipmentSetName: string, warehouseName: string) {
+  await openEquipmentSet(page, equipmentSetName)
+  const dialog = await openCreateDialog(page)
+  await dialog.getByPlaceholder('Название').fill(name)
+  await dialog.getByPlaceholder('Серийный номер').fill(serial)
+  await selectInDialog(page, dialog, 'Склад', warehouseName)
+  await dialog.getByRole('button', { name: 'Создать' }).click()
+  await expect(rowByText(page, name)).toBeVisible()
+}
+
+async function editEquipment(page: Page, currentName: string, nextName: string, serial: string, equipmentSetName: string) {
+  await openEquipmentSet(page, equipmentSetName)
+  const dialog = await openEditDialog(page, currentName)
+  await dialog.getByPlaceholder('Название').fill(nextName)
+  await dialog.getByPlaceholder('Серийный номер').fill(serial)
+  await dialog.getByRole('button', { name: 'Сохранить' }).click()
+  await expect(rowByText(page, nextName)).toBeVisible()
+  await expectRowAbsent(page, currentName)
+}
+
+async function deleteEquipment(page: Page, name: string, equipmentSetName: string) {
+  await openEquipmentSet(page, equipmentSetName)
+  await rowByText(page, name).getByRole('button', { name: 'Удалить' }).click()
+  await expectRowAbsent(page, name)
+}
+
+async function createProject(
+  page: Page,
+  name: string,
+  projectTypeName: string,
+  chiefEngineerName: string,
+  startDate: string,
+  endDate: string
+) {
+  await page.goto('/projects')
+  const dialog = await openCreateDialog(page)
+  await dialog.getByPlaceholder('Название съёмки').fill(name)
+  await selectInDialog(page, dialog, 'Площадка', projectTypeName)
+  await selectInDialog(page, dialog, 'Главный инженер', chiefEngineerName)
+  await dialog.getByPlaceholder('Дата начала YYYY-MM-DD').fill(startDate)
+  await dialog.getByPlaceholder('Дата конца YYYY-MM-DD').fill(endDate)
+  await dialog.getByRole('button', { name: 'Создать' }).click()
+  const projectRow = rowByText(page, name)
+  await expect(projectRow).toBeVisible()
+  await expect(projectRow).toContainText(chiefEngineerName)
+}
+
+async function editProject(page: Page, currentName: string, nextName: string, startDate: string, endDate: string) {
+  await page.goto('/projects')
+  const dialog = await openEditDialog(page, currentName)
+  await dialog.getByPlaceholder('Название съёмки').fill(nextName)
+  await dialog.getByPlaceholder('Дата начала YYYY-MM-DD').fill(startDate)
+  await dialog.getByPlaceholder('Дата конца YYYY-MM-DD').fill(endDate)
+  await dialog.getByRole('button', { name: 'Сохранить' }).click()
+  await expect(rowByText(page, nextName)).toBeVisible()
+  await expectRowAbsent(page, currentName)
+}
+
+async function deleteProject(page: Page, name: string) {
+  await page.goto('/projects')
+  await rowByText(page, name).getByRole('button', { name: 'Удалить' }).click()
+  await expectRowAbsent(page, name)
+}
+
 test.beforeAll(async () => {
   await waitForBackend()
 })
 
-test('user can register and manage CRM dictionaries', async ({ page }) => {
-  const user = buildUser('Flow')
-  const suffix = uniqueSuffix()
-  const setTypeName = `Тип_${suffix}`
-  const projectTypeName = `Площадка_${suffix}`
-  const warehouseName = `Склад_${suffix}`
-  const draftName = `Шаблон_${suffix}`
-
+async function signUpAndOpenDashboard(page: Page, prefix: string) {
+  const user = buildUser(prefix)
   await signUp(page, user)
   await expect(page.getByRole('heading', { name: 'Ultralive CRM' })).toBeVisible()
+  return user
+}
 
-  await page.goto('/set_types')
-  const setTypeInput = page.getByPlaceholder('Название вида')
-  await setTypeInput.fill(setTypeName)
-  await expect(setTypeInput).toHaveValue(setTypeName)
-  await page.locator('form').first().getByRole('button', { name: 'Добавить' }).click()
-  await expect(page.getByText(setTypeName)).toBeVisible()
+test.describe('crud forms', () => {
+  test('set types: create/edit/delete', async ({ page }) => {
+    test.slow()
+    const user = await signUpAndOpenDashboard(page, 'SetTypes')
+    const suffix = user.email.split('@')[0]
+    const setTypeCreate = `QA_SetType_Create_${suffix}`
+    const setTypeEdit = `QA_SetType_Edit_${suffix}`
 
-  await page.goto('/project_types')
-  await page.getByPlaceholder('Название площадки').fill(projectTypeName)
-  await page.getByPlaceholder('Neaktor ID (опционально)').fill(`N_${suffix}`)
-  await page.getByRole('button', { name: 'Добавить' }).click()
-  await expect(page.getByText(projectTypeName)).toBeVisible()
+    await createSetType(page, setTypeCreate)
+    await editSetType(page, setTypeCreate, setTypeEdit)
+    await deleteSetType(page, setTypeEdit)
+  })
 
-  await page.goto('/warehouses')
-  await page.getByPlaceholder('Название склада').fill(warehouseName)
-  await page.getByPlaceholder('Адрес').fill(`Адрес ${suffix}`)
-  await page.getByRole('button', { name: 'Добавить' }).click()
-  await expect(page.getByText(warehouseName)).toBeVisible()
+  test('project types: create/edit/delete', async ({ page }) => {
+    test.slow()
+    const user = await signUpAndOpenDashboard(page, 'ProjectTypes')
+    const suffix = user.email.split('@')[0]
+    const projectTypeCreate = `QA_ProjectType_Create_${suffix}`
+    const projectTypeEdit = `QA_ProjectType_Edit_${suffix}`
 
-  await page.goto('/drafts')
-  await page.getByPlaceholder('Название шаблона').fill(draftName)
-  await page.getByRole('button', { name: 'Добавить' }).click()
-  await expect(page.getByText(draftName)).toBeVisible()
+    await createProjectType(page, projectTypeCreate, `N_CREATE_${suffix}`)
+    await editProjectType(page, projectTypeCreate, projectTypeEdit, `N_EDIT_${suffix}`)
+    await deleteProjectType(page, projectTypeEdit)
+  })
 
-  const draftRow = page.locator('tr', { hasText: draftName }).first()
-  await draftRow.getByRole('link', { name: 'Состав' }).click()
-  await expect(page.getByRole('heading', { name: `Состав шаблона: ${draftName}` })).toBeVisible()
+  test('warehouses: create/edit/delete', async ({ page }) => {
+    test.slow()
+    const user = await signUpAndOpenDashboard(page, 'Warehouses')
+    const suffix = user.email.split('@')[0]
+    const warehouseCreate = `QA_Warehouse_Create_${suffix}`
+    const warehouseEdit = `QA_Warehouse_Edit_${suffix}`
+
+    await createWarehouse(page, warehouseCreate, `Адрес создание ${suffix}`)
+    await editWarehouse(page, warehouseCreate, warehouseEdit, `Адрес редактирование ${suffix}`)
+    await deleteWarehouse(page, warehouseEdit)
+  })
+
+  test('drafts: create/edit/delete', async ({ page }) => {
+    test.slow()
+    const user = await signUpAndOpenDashboard(page, 'Drafts')
+    const suffix = user.email.split('@')[0]
+    const draftCreate = `QA_Draft_Create_${suffix}`
+    const draftEdit = `QA_Draft_Edit_${suffix}`
+
+    await createDraft(page, draftCreate)
+    await editDraft(page, draftCreate, draftEdit)
+    await deleteDraft(page, draftEdit)
+  })
+
+  test('equipment sets: create/edit/delete', async ({ page }) => {
+    test.slow()
+    const user = await signUpAndOpenDashboard(page, 'EquipmentSets')
+    const suffix = user.email.split('@')[0]
+    const dependencySetType = `QA_SetType_Dependency_${suffix}`
+    const equipmentSetCreate = `QA_EqSet_Create_${suffix}`
+    const equipmentSetEdit = `QA_EqSet_Edit_${suffix}`
+
+    await createSetType(page, dependencySetType)
+    await createEquipmentSet(page, equipmentSetCreate, `Описание создание ${suffix}`, dependencySetType)
+    await editEquipmentSet(page, equipmentSetCreate, equipmentSetEdit, `Описание редактирование ${suffix}`)
+    await deleteEquipmentSet(page, equipmentSetEdit)
+    await deleteSetType(page, dependencySetType)
+  })
+
+  test('equipment in set: create/edit/delete', async ({ page }) => {
+    test.slow()
+    const user = await signUpAndOpenDashboard(page, 'Equipment')
+    const suffix = user.email.split('@')[0]
+    const equipmentSetType = `QA_SetType_Equipment_${suffix}`
+    const equipmentWarehouse = `QA_Warehouse_Equipment_${suffix}`
+    const equipmentSetName = `QA_EqSet_Equipment_${suffix}`
+    const equipmentCreate = `QA_Equipment_Create_${suffix}`
+    const equipmentEdit = `QA_Equipment_Edit_${suffix}`
+
+    await createSetType(page, equipmentSetType)
+    await createWarehouse(page, equipmentWarehouse, `Адрес оборудования ${suffix}`)
+    await createEquipmentSet(page, equipmentSetName, `Комплект для оборудования ${suffix}`, equipmentSetType)
+
+    await createEquipment(page, equipmentCreate, `SER_CREATE_${suffix}`, equipmentSetName, equipmentWarehouse)
+    await editEquipment(page, equipmentCreate, equipmentEdit, `SER_EDIT_${suffix}`, equipmentSetName)
+    await deleteEquipment(page, equipmentEdit, equipmentSetName)
+
+    await deleteEquipmentSet(page, equipmentSetName)
+    await deleteSetType(page, equipmentSetType)
+    await deleteWarehouse(page, equipmentWarehouse)
+  })
+
+  test('projects: create/edit/delete', async ({ page }) => {
+    test.slow()
+    const user = await signUpAndOpenDashboard(page, 'Projects')
+    const suffix = user.email.split('@')[0]
+    const chiefEngineerName = `${user.firstName} ${user.lastName}`
+    const projectTypeName = `QA_ProjectType_Project_${suffix}`
+    const projectCreate = `QA_Project_Create_${suffix}`
+    const projectEdit = `QA_Project_Edit_${suffix}`
+
+    await createProjectType(page, projectTypeName, `N_PROJECT_${suffix}`)
+    await createProject(page, projectCreate, projectTypeName, chiefEngineerName, '2030-01-10', '2030-01-11')
+    await editProject(page, projectCreate, projectEdit, '2030-01-12', '2030-01-13')
+    await deleteProject(page, projectEdit)
+    await deleteProjectType(page, projectTypeName)
+  })
 })
 
-test('user can logout and login again', async ({ page }) => {
-  const user = buildUser('Auth')
+test('auth: logout/login and profile/password update', async ({ page }) => {
+  const user = await signUpAndOpenDashboard(page, 'Auth')
   const updatedLastName = `${user.lastName}_Updated`
   const nextPassword = `${user.password}_new`
-
-  await signUp(page, user)
-  await expect(page.getByRole('heading', { name: 'Ultralive CRM' })).toBeVisible()
 
   await page.getByRole('banner').getByRole('button', { name: 'Выйти' }).click()
   await expect(page).toHaveURL(/\/login$/)
