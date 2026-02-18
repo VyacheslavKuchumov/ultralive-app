@@ -255,39 +255,24 @@ def main() -> int:
         return 1
 
     bot = ReleaseBot(config)
+    connect_result = bot.connect((config.xmpp_server, config.xmpp_port))
 
-    async def run_async() -> int:
-        connect_result = bot.connect((config.xmpp_server, config.xmpp_port))
-        if inspect.isawaitable(connect_result):
-            connect_result = await connect_result
+    # For modern slixmpp, connect() returns a Future bound to bot.loop.
+    # Run it on that exact loop to avoid cross-loop errors.
+    if inspect.isawaitable(connect_result):
+        connect_result = bot.loop.run_until_complete(connect_result)
 
-        if connect_result is False:
-            print("[release-bot] failed to connect to XMPP server")
-            return 1
-
-        # Newer slixmpp versions expose lifecycle via awaitable disconnected handle.
-        disconnected = getattr(bot, "disconnected", None)
-        if disconnected is not None and inspect.isawaitable(disconnected):
-            await disconnected
-            return 0
-
-        # Fallback for APIs without explicit awaitable disconnect handle.
-        while True:
-            await asyncio.sleep(3600)
+    if connect_result is False:
+        print("[release-bot] failed to connect to XMPP server")
+        return 1
 
     if hasattr(bot, "process"):
-        connect_result = bot.connect((config.xmpp_server, config.xmpp_port))
-        if inspect.isawaitable(connect_result):
-            connect_result = asyncio.run(connect_result)
-
-        if connect_result is False:
-            print("[release-bot] failed to connect to XMPP server")
-            return 1
-
         bot.process(forever=True)
         return 0
 
-    return asyncio.run(run_async())
+    # slixmpp >= 1.9 recommends running until disconnected on xmpp.loop.
+    bot.loop.run_until_complete(bot.disconnected)
+    return 0
 
 
 if __name__ == "__main__":
