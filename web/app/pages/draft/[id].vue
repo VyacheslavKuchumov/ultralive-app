@@ -42,9 +42,9 @@
       </template>
 
       <div class="overflow-x-auto">
-        <table class="w-full text-sm">
+        <table class="w-full min-w-max text-sm">
           <thead>
-            <tr class="text-left border-b border-gray-200">
+            <tr class="text-left border-b border-gray-200 whitespace-nowrap">
               <th class="py-2">ID</th>
               <th class="py-2">Название</th>
               <th class="py-2">Серия</th>

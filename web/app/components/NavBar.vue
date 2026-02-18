@@ -10,7 +10,6 @@
         <UButton size="sm" color="neutral" variant="ghost" to="/projects/archived">Архив</UButton>
         <UButton size="sm" color="neutral" variant="ghost" to="/drafts">Шаблоны</UButton>
         <UButton size="sm" color="neutral" variant="ghost" to="/equipment_sets">Комплекты</UButton>
-        <UButton size="sm" color="neutral" variant="ghost" to="/equipment">Оборудование</UButton>
         <UButton size="sm" color="neutral" variant="ghost" to="/set_types">Виды комплектов</UButton>
         <UButton size="sm" color="neutral" variant="ghost" to="/warehouses">Склады</UButton>
         <UButton size="sm" color="neutral" variant="ghost" to="/project_types">Площадки</UButton>
@@ -37,7 +36,6 @@
         <UButton color="neutral" variant="ghost" to="/projects/archived" class="justify-start" @click="menuOpen = false">Архив</UButton>
         <UButton color="neutral" variant="ghost" to="/drafts" class="justify-start" @click="menuOpen = false">Шаблоны</UButton>
         <UButton color="neutral" variant="ghost" to="/equipment_sets" class="justify-start" @click="menuOpen = false">Комплекты</UButton>
-        <UButton color="neutral" variant="ghost" to="/equipment" class="justify-start" @click="menuOpen = false">Оборудование</UButton>
         <UButton color="neutral" variant="ghost" to="/set_types" class="justify-start" @click="menuOpen = false">Виды комплектов</UButton>
         <UButton color="neutral" variant="ghost" to="/warehouses" class="justify-start" @click="menuOpen = false">Склады</UButton>
         <UButton color="neutral" variant="ghost" to="/project_types" class="justify-start" @click="menuOpen = false">Площадки</UButton>

@@ -33,7 +33,6 @@
       <UButton to="/projects/archived" color="primary" variant="soft" class="justify-center">Архив съёмок</UButton>
       <UButton to="/drafts" color="primary" variant="soft" class="justify-center">Шаблоны</UButton>
       <UButton to="/equipment_sets" color="primary" variant="soft" class="justify-center">Комплекты оборудования</UButton>
-      <UButton to="/equipment" color="primary" variant="soft" class="justify-center">Оборудование</UButton>
       <UButton to="/set_types" color="primary" variant="soft" class="justify-center">Виды комплектов</UButton>
       <UButton to="/warehouses" color="primary" variant="soft" class="justify-center">Склады</UButton>
       <UButton to="/project_types" color="primary" variant="soft" class="justify-center">Площадки</UButton>

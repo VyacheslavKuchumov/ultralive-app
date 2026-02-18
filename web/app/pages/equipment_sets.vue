@@ -2,54 +2,112 @@
   <div class="space-y-6">
     <UCard>
       <template #header>
-        <h1 class="text-xl font-semibold">Комплекты оборудования</h1>
+        <div class="flex items-center justify-between gap-3">
+          <h1 class="text-xl font-semibold">Комплекты оборудования</h1>
+          <UButton color="primary" icon="i-lucide-plus" @click="openCreate">
+            <span class="hidden sm:inline">Добавить</span>
+          </UButton>
+        </div>
       </template>
-
-      <form class="grid gap-3 md:grid-cols-4" @submit.prevent="save">
-        <UInput v-model="form.equipment_set_name" placeholder="Название комплекта" />
-        <UInput v-model="form.description" placeholder="Описание" />
-        <USelect v-model="form.set_type_name" :items="setTypeOptions" placeholder="Вид комплекта" />
-        <UButton type="submit" color="primary">{{ form.equipment_set_id ? 'Сохранить' : 'Добавить' }}</UButton>
-      </form>
     </UCard>
 
-    <UCard>
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead>
-            <tr class="text-left border-b border-gray-200">
-              <th class="py-2">ID</th>
-              <th class="py-2">Комплект</th>
-              <th class="py-2">Тип</th>
-              <th class="py-2">Описание</th>
-              <th class="py-2 w-56">Действия</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="item in crm.equipmentSets" :key="item.equipment_set_id" class="border-b border-gray-100">
-              <td class="py-2">{{ item.equipment_set_id }}</td>
-              <td class="py-2">{{ item.equipment_set_name }}</td>
-              <td class="py-2">{{ item.type?.set_type_name || '-' }}</td>
-              <td class="py-2">{{ item.description || '-' }}</td>
-              <td class="py-2 flex gap-2">
-                <UButton size="xs" color="neutral" variant="soft" :to="`/equipment?set=${item.equipment_set_id}`">Оборудование</UButton>
-                <UButton size="xs" color="neutral" variant="soft" @click="edit(item)">Изменить</UButton>
-                <UButton size="xs" color="error" variant="soft" @click="remove(item.equipment_set_id)">Удалить</UButton>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+    <template v-if="crm.equipmentSets.length">
+      <div class="grid gap-4">
+        <UCard
+          v-for="item in crm.equipmentSets"
+          :key="item.equipment_set_id"
+          :data-testid="`equipment-set-card-${item.equipment_set_id}`"
+        >
+          <template #header>
+            <div class="flex items-start justify-between gap-3">
+              <div class="space-y-1">
+                <h2 class="text-lg font-semibold">{{ item.equipment_set_name }}</h2>
+                <p class="text-sm text-gray-600">Тип: {{ item.type?.set_type_name || '-' }}</p>
+                <p class="text-sm text-gray-600">{{ item.description || 'Без описания' }}</p>
+              </div>
+
+              <div class="flex gap-1 sm:gap-2 shrink-0">
+                <UButton
+                  size="xs"
+                  color="neutral"
+                  variant="soft"
+                  icon="i-lucide-package"
+                  :to="`/equipment?set=${item.equipment_set_id}`"
+                  aria-label="Открыть комплект"
+                >
+                  <span class="hidden sm:inline">Открыть комплект</span>
+                </UButton>
+                <UButton size="xs" color="neutral" variant="soft" icon="i-lucide-pencil" aria-label="Изменить" @click="edit(item)">
+                  <span class="hidden sm:inline">Изменить</span>
+                </UButton>
+                <UButton size="xs" color="error" variant="soft" icon="i-lucide-trash-2" aria-label="Удалить" @click="remove(item.equipment_set_id)">
+                  <span class="hidden sm:inline">Удалить</span>
+                </UButton>
+              </div>
+            </div>
+          </template>
+
+          <div v-if="equipmentInSet(item.equipment_set_id).length" class="overflow-x-auto">
+            <table class="w-full min-w-max text-sm">
+              <thead>
+                <tr class="text-left border-b border-gray-200 whitespace-nowrap">
+                  <th class="py-2">ID</th>
+                  <th class="py-2">Название</th>
+                  <th class="py-2">Серия</th>
+                  <th class="py-2">Склад</th>
+                  <th class="py-2">ТО</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="equipmentItem in equipmentInSet(item.equipment_set_id)" :key="equipmentItem.equipment_id" class="border-b border-gray-100">
+                  <td class="py-2">{{ equipmentItem.equipment_id }}</td>
+                  <td class="py-2">{{ equipmentItem.equipment_name }}</td>
+                  <td class="py-2">{{ equipmentItem.serial_number }}</td>
+                  <td class="py-2">{{ equipmentItem.storage?.warehouse_name || '-' }}</td>
+                  <td class="py-2">{{ equipmentItem.needs_maintenance ? 'Да' : 'Нет' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p v-else class="text-sm text-gray-600">В комплекте пока нет оборудования.</p>
+        </UCard>
       </div>
+    </template>
+
+    <UCard v-else>
+      <p class="text-sm text-gray-600">Комплекты пока не добавлены.</p>
     </UCard>
+
+    <UModal v-model:open="isFormOpen" :title="form.equipment_set_id ? 'Редактировать комплект' : 'Добавить комплект'">
+      <template #body>
+        <form class="space-y-3" @submit.prevent="save">
+          <UFormField label="Название комплекта" required>
+            <UInput v-model="form.equipment_set_name" placeholder="Название комплекта" required />
+          </UFormField>
+          <UFormField label="Описание">
+            <UInput v-model="form.description" placeholder="Описание" />
+          </UFormField>
+          <UFormField label="Вид комплекта" required>
+            <USelect v-model="form.set_type_name" :items="setTypeOptions" :portal="false" placeholder="Вид комплекта" />
+          </UFormField>
+          <div class="flex justify-end gap-2">
+            <UButton type="button" color="neutral" variant="soft" @click="isFormOpen = false">Отмена</UButton>
+            <UButton type="submit" color="primary" icon="i-lucide-save">{{ form.equipment_set_id ? 'Сохранить' : 'Создать' }}</UButton>
+          </div>
+        </form>
+      </template>
+    </UModal>
   </div>
 </template>
 
 <script setup>
-import { computed, reactive } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { useCRMStore } from '~/stores/crm'
 
 const crm = useCRMStore()
-await Promise.all([crm.fetchSetTypes(), crm.fetchEquipmentSets()])
+const isFormOpen = ref(false)
+await Promise.all([crm.fetchSetTypes(), crm.fetchEquipmentSets(), crm.fetchEquipment()])
 
 const form = reactive({
   equipment_set_id: null,
@@ -60,11 +118,47 @@ const form = reactive({
 
 const setTypeOptions = computed(() => crm.setTypes.map((item) => item.set_type_name))
 
-function edit(item) {
+const equipmentBySetId = computed(() => {
+  const grouped = {}
+
+  for (const item of crm.equipment) {
+    const id = item.equipment_set?.equipment_set_id || item.equipment_set_id
+    if (!id) continue
+    if (!grouped[id]) grouped[id] = []
+    grouped[id].push(item)
+  }
+
+  return grouped
+})
+
+function equipmentInSet(setId) {
+  return equipmentBySetId.value[setId] || []
+}
+
+function resetForm() {
+  form.equipment_set_id = null
+  form.equipment_set_name = ''
+  form.description = ''
+  form.set_type_name = ''
+}
+
+async function openCreate() {
+  if (!crm.setTypes.length) {
+    await crm.fetchSetTypes()
+  }
+  resetForm()
+  isFormOpen.value = true
+}
+
+async function edit(item) {
+  if (!crm.setTypes.length) {
+    await crm.fetchSetTypes()
+  }
   form.equipment_set_id = item.equipment_set_id
   form.equipment_set_name = item.equipment_set_name
   form.description = item.description || ''
   form.set_type_name = item.type?.set_type_name || ''
+  isFormOpen.value = true
 }
 
 async function save() {
@@ -82,19 +176,15 @@ async function save() {
     await crm.createEquipmentSet(payload)
   }
 
-  form.equipment_set_id = null
-  form.equipment_set_name = ''
-  form.description = ''
-  form.set_type_name = ''
+  resetForm()
+  isFormOpen.value = false
 }
 
 async function remove(id) {
   await crm.deleteEquipmentSet(id)
   if (form.equipment_set_id === id) {
-    form.equipment_set_id = null
-    form.equipment_set_name = ''
-    form.description = ''
-    form.set_type_name = ''
+    resetForm()
+    isFormOpen.value = false
   }
 }
 </script>

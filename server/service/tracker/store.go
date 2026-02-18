@@ -390,7 +390,12 @@ func (s *Store) DeleteEquipment(id int) error {
 }
 
 func (s *Store) ListProjects(archived bool) ([]*types.Project, error) {
-	result, err := s.listProjects("WHERE p.archived = $1", archived)
+	where := "WHERE p.archived IS FALSE"
+	if archived {
+		where = "WHERE p.archived IS TRUE"
+	}
+
+	result, err := s.listProjects(where)
 	if err != nil {
 		return nil, err
 	}
@@ -1074,15 +1079,15 @@ func (s *Store) listProjects(extraWhere string, args ...any) ([]*types.Project, 
 			COALESCE(p.neaktor_id, ''),
 			p.project_name,
 			p.archived,
-			p.project_type_id,
+			COALESCE(p.project_type_id, 0),
 			TO_CHAR(p.shooting_start_date, 'YYYY-MM-DD'),
 			TO_CHAR(p.shooting_end_date, 'YYYY-MM-DD'),
-			p.chief_engineer_id,
-			pt.project_type_name,
-			u.name
+			COALESCE(p.chief_engineer_id, 0),
+			COALESCE(pt.project_type_name, ''),
+			COALESCE(u.name, '')
 		FROM projects p
-		JOIN project_types pt ON pt.project_type_id = p.project_type_id
-		JOIN users u ON u.id = p.chief_engineer_id
+		LEFT JOIN project_types pt ON pt.project_type_id = p.project_type_id
+		LEFT JOIN users u ON u.id = p.chief_engineer_id
 	`
 	if strings.TrimSpace(extraWhere) != "" {
 		query += " " + extraWhere
