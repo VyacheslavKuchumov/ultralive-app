@@ -70,7 +70,7 @@ cd web
 npm run build
 ```
 
-## XMPP Release Bot (Docker)
+## XMPP Release Bot (systemd)
 
 Release bot listens in XMPP and runs deploy on `/update`:
 
@@ -86,24 +86,25 @@ python3 scripts/generate_release_bot_env.py \
   --jid ultralive-release-bot@vyachik-dev.ru \
   --password 'BOT_XMPP_PASSWORD' \
   --allowed-sender your-admin@vyachik-dev.ru \
-  --host-repo-path /opt/ultralive-app-v2
+  --repo-path /opt/ultralive-app-v2
 ```
 
 This creates `.env.release-bot` in repository root.
 
-### 2) Start bot container
+### 2) Install and start service
 
 ```bash
-scripts/release_bot_stack.sh up
+scripts/setup_release_bot_systemd.sh install
 ```
 
-### 3) Manage bot container
+### 3) Manage service
 
 ```bash
-scripts/release_bot_stack.sh ps
-scripts/release_bot_stack.sh logs
-scripts/release_bot_stack.sh restart
-scripts/release_bot_stack.sh down
+scripts/release_bot_service.sh status
+scripts/release_bot_service.sh logs
+scripts/release_bot_service.sh restart
+scripts/release_bot_service.sh stop
+scripts/setup_release_bot_systemd.sh uninstall
 ```
 
 ### 4) XMPP commands

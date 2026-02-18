@@ -66,7 +66,7 @@ class BotConfig:
         if not allowed_senders:
             raise ValueError("XMPP_ALLOWED_SENDERS cannot be empty")
 
-        repo_path = Path(os.getenv("REPO_PATH", "/workspace")).resolve()
+        repo_path = Path(os.getenv("REPO_PATH", ".")).resolve()
         lock_file = Path(os.getenv("DEPLOY_LOCK_FILE", str(repo_path / ".release-bot-deploy.lock"))).resolve()
         reply_max_chars = int(os.getenv("BOT_REPLY_MAX_CHARS", "3000"))
 

@@ -89,9 +89,9 @@ Recommended safety flow:
 - Frontend build: `cd web && npm run build`
 - E2E: `cd web && npm run test:e2e`
 
-## XMPP Release Bot (Docker)
+## XMPP Release Bot (systemd)
 
-You can run a dedicated XMPP bot that accepts deploy commands (for example from Prosody account `ultralive-release-bot@vyachik-dev.ru`).
+You can run a dedicated XMPP bot as a systemd service that accepts deploy commands (for example from Prosody account `ultralive-release-bot@vyachik-dev.ru`).
 
 Supported bot commands:
 
@@ -107,7 +107,7 @@ python3 scripts/generate_release_bot_env.py \
   --jid ultralive-release-bot@vyachik-dev.ru \
   --password 'BOT_XMPP_PASSWORD' \
   --allowed-sender your-admin@vyachik-dev.ru \
-  --host-repo-path /opt/ultralive-app-v2
+  --repo-path /opt/ultralive-app-v2
 ```
 
 Notes:
@@ -115,19 +115,20 @@ Notes:
 - `--allowed-sender` can be passed multiple times.
 - `.env.release-bot` is ignored by git.
 
-### 2. Start bot container
+### 2. Install and start systemd service
 
 ```bash
-scripts/release_bot_stack.sh up
+scripts/setup_release_bot_systemd.sh install
 ```
 
-### 3. Manage bot container
+### 3. Manage service
 
 ```bash
-scripts/release_bot_stack.sh ps
-scripts/release_bot_stack.sh logs
-scripts/release_bot_stack.sh restart
-scripts/release_bot_stack.sh down
+scripts/release_bot_service.sh status
+scripts/release_bot_service.sh logs
+scripts/release_bot_service.sh restart
+scripts/release_bot_service.sh stop
+scripts/setup_release_bot_systemd.sh uninstall
 ```
 
 ## Repository Structure

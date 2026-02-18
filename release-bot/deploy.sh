@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 set -eu
 
-REPO_PATH="${REPO_PATH:-/workspace}"
+REPO_PATH="${REPO_PATH:-.}"
 DEPLOY_REMOTE="${DEPLOY_REMOTE:-origin}"
 DEPLOY_BRANCH="${DEPLOY_BRANCH:-main}"
 DEPLOY_COMPOSE_FILE="${DEPLOY_COMPOSE_FILE:-}"
