@@ -1,0 +1,15 @@
+services:
+  release-bot:
+    build:
+      context: ./release-bot
+      dockerfile: Dockerfile
+    container_name: ultralive_release_bot
+    restart: unless-stopped
+    env_file:
+      - .env.release-bot
+    environment:
+      REPO_PATH: ${REPO_PATH:-/workspace}
+      DOCKER_HOST: unix:///var/run/docker.sock
+    volumes:
+      - ${HOST_REPO_PATH:?set in .env.release-bot}:${REPO_PATH:-/workspace}
+      - /var/run/docker.sock:/var/run/docker.sock
