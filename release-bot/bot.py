@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import fcntl
+import inspect
 import os
 import subprocess
 from dataclasses import dataclass
@@ -254,13 +255,39 @@ def main() -> int:
         return 1
 
     bot = ReleaseBot(config)
-    connected = bot.connect((config.xmpp_server, config.xmpp_port))
-    if not connected:
-        print("[release-bot] failed to connect to XMPP server")
-        return 1
 
-    bot.process(forever=True)
-    return 0
+    async def run_async() -> int:
+        connect_result = bot.connect((config.xmpp_server, config.xmpp_port))
+        if inspect.isawaitable(connect_result):
+            connect_result = await connect_result
+
+        if connect_result is False:
+            print("[release-bot] failed to connect to XMPP server")
+            return 1
+
+        # Newer slixmpp versions expose lifecycle via awaitable disconnected handle.
+        disconnected = getattr(bot, "disconnected", None)
+        if disconnected is not None and inspect.isawaitable(disconnected):
+            await disconnected
+            return 0
+
+        # Fallback for APIs without explicit awaitable disconnect handle.
+        while True:
+            await asyncio.sleep(3600)
+
+    if hasattr(bot, "process"):
+        connect_result = bot.connect((config.xmpp_server, config.xmpp_port))
+        if inspect.isawaitable(connect_result):
+            connect_result = asyncio.run(connect_result)
+
+        if connect_result is False:
+            print("[release-bot] failed to connect to XMPP server")
+            return 1
+
+        bot.process(forever=True)
+        return 0
+
+    return asyncio.run(run_async())
 
 
 if __name__ == "__main__":
