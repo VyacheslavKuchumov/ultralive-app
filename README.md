@@ -114,6 +114,7 @@ Notes:
 
 - `--allowed-sender` can be passed multiple times.
 - `.env.release-bot` is ignored by git.
+- default deploy script path is `<repo-path>/release-bot/deploy.sh` (override with `DEPLOY_SCRIPT_PATH` in `.env.release-bot` if needed).
 
 ### 2. Install and start systemd service
 

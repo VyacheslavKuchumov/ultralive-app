@@ -91,6 +91,9 @@ python3 scripts/generate_release_bot_env.py \
 
 This creates `.env.release-bot` in repository root.
 
+By default, deploy script path is `<repo-path>/release-bot/deploy.sh`.  
+If needed, set `DEPLOY_SCRIPT_PATH=/absolute/path/to/release-bot/deploy.sh` in `.env.release-bot`.
+
 ### 2) Install and start service
 
 ```bash
