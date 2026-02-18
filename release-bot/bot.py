@@ -34,6 +34,7 @@ class BotConfig:
     xmpp_resource: str
     allowed_senders: set[str]
     repo_path: Path
+    deploy_script_path: Path
     deploy_lock_file: Path
     reply_max_chars: int
 
@@ -68,6 +69,9 @@ class BotConfig:
             raise ValueError("XMPP_ALLOWED_SENDERS cannot be empty")
 
         repo_path = Path(os.getenv("REPO_PATH", ".")).resolve()
+        deploy_script_path = Path(
+            os.getenv("DEPLOY_SCRIPT_PATH", str(repo_path / "release-bot" / "deploy.sh"))
+        ).resolve()
         lock_file = Path(os.getenv("DEPLOY_LOCK_FILE", str(repo_path / ".release-bot-deploy.lock"))).resolve()
         reply_max_chars = int(os.getenv("BOT_REPLY_MAX_CHARS", "3000"))
 
@@ -79,6 +83,7 @@ class BotConfig:
             xmpp_resource=xmpp_resource,
             allowed_senders=allowed_senders,
             repo_path=repo_path,
+            deploy_script_path=deploy_script_path,
             deploy_lock_file=lock_file,
             reply_max_chars=reply_max_chars,
         )
@@ -122,6 +127,11 @@ def _run_command(cmd: list[str], cwd: Path, timeout_seconds: int = 1800) -> tupl
 
 
 def run_deploy(config: BotConfig) -> tuple[bool, str]:
+    if not config.deploy_script_path.exists():
+        return False, f"Deploy script not found: {config.deploy_script_path}"
+    if not os.access(config.deploy_script_path, os.X_OK):
+        return False, f"Deploy script is not executable: {config.deploy_script_path}"
+
     config.deploy_lock_file.parent.mkdir(parents=True, exist_ok=True)
 
     with config.deploy_lock_file.open("w", encoding="utf-8") as lock_fd:
@@ -130,7 +140,7 @@ def run_deploy(config: BotConfig) -> tuple[bool, str]:
         except BlockingIOError:
             return False, "Deploy is already running."
 
-        commands = [["/app/deploy.sh"]]
+        commands = [[str(config.deploy_script_path)]]
         log_lines: list[str] = []
 
         for cmd in commands:

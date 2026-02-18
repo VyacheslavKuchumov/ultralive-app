@@ -24,6 +24,7 @@ def infer_server_from_jid(jid: str) -> str:
 def build_env_text(args: argparse.Namespace) -> str:
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%SZ")
     xmpp_server = args.xmpp_server or infer_server_from_jid(args.jid)
+    deploy_script_path = args.deploy_script_path or f"{args.repo_path}/release-bot/deploy.sh"
 
     allowed_senders = [bare_jid(value) for value in args.allowed_sender]
     if not allowed_senders:
@@ -45,6 +46,7 @@ def build_env_text(args: argparse.Namespace) -> str:
         f"DEPLOY_REMOTE={args.deploy_remote}",
         f"DEPLOY_BRANCH={args.deploy_branch}",
         f"DEPLOY_COMPOSE_FILE={args.deploy_compose_file}",
+        f"DEPLOY_SCRIPT_PATH={deploy_script_path}",
         "",
         f"BOT_REPLY_MAX_CHARS={args.bot_reply_max_chars}",
         "",
@@ -112,6 +114,11 @@ def parse_args() -> argparse.Namespace:
         "--deploy-compose-file",
         default="",
         help="Optional compose file path relative to repo root",
+    )
+    parser.add_argument(
+        "--deploy-script-path",
+        default="",
+        help="Optional absolute path to deploy script (default: <repo-path>/release-bot/deploy.sh)",
     )
     parser.add_argument(
         "--bot-reply-max-chars",
