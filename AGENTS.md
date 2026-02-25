@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Project-specific context for coding agents in the `ultralive-app-v2` repository.
+Project-specific context for coding agents in the `ultralive-app` repository.
 
 ## Project Summary
 

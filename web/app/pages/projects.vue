@@ -30,7 +30,11 @@
         </div>
 
         <div v-if="crm.projects.length" class="grid gap-4 md:grid-cols-2">
-          <UCard v-for="item in crm.projects" :key="item.project_id">
+          <UCard
+            v-for="item in crm.projects"
+            :key="item.project_id"
+            :data-testid="`project-card-${item.project_id}`"
+          >
             <template #header>
               <div class="flex items-start justify-between gap-3">
                 <div class="space-y-1">
@@ -95,9 +99,26 @@
           <UFormField label="Главный инженер" required>
             <USelect v-model="form.chief_engineer_name" :items="userOptions" :portal="false" placeholder="Главный инженер" />
           </UFormField>
-          <UFormField label="Период съёмки" required class="md:col-span-2">
-            <UInputDateRange v-model="form.shooting_date_range" class="w-full" />
+
+          <UFormField label="Период съёмки (DateRangePicker)" required class="md:col-span-2">
+            <UPopover>
+              <UButton color="neutral" variant="soft" class="w-full justify-start">
+                {{ shootingDateRangeLabel }}
+              </UButton>
+
+              <template #content>
+                <UCalendar v-model="shootingDateRangeModel" range />
+              </template>
+            </UPopover>
           </UFormField>
+
+          <UFormField label="Дата начала" required>
+            <UInput v-model="form.shooting_start_date" placeholder="Дата начала YYYY-MM-DD" required />
+          </UFormField>
+          <UFormField label="Дата окончания" required>
+            <UInput v-model="form.shooting_end_date" placeholder="Дата конца YYYY-MM-DD" required />
+          </UFormField>
+
           <UCheckbox v-model="form.archived" label="В архив" class="md:col-span-2" />
 
           <div class="md:col-span-2 flex justify-end gap-2">
@@ -125,7 +146,8 @@ const form = reactive({
   project_name: '',
   project_type_name: '',
   chief_engineer_name: '',
-  shooting_date_range: null,
+  shooting_start_date: '',
+  shooting_end_date: '',
   archived: false
 })
 
@@ -169,12 +191,36 @@ function formatDateValue(value) {
   return `${year}-${month}-${day}`
 }
 
+const shootingDateRangeModel = computed({
+  get() {
+    const start = parseDateValue(form.shooting_start_date)
+    const end = parseDateValue(form.shooting_end_date)
+
+    if (!start || !end) return null
+
+    return { start, end }
+  },
+  set(value) {
+    form.shooting_start_date = formatDateValue(value?.start)
+    form.shooting_end_date = formatDateValue(value?.end)
+  }
+})
+
+const shootingDateRangeLabel = computed(() => {
+  if (!form.shooting_start_date || !form.shooting_end_date) {
+    return 'Выбрать период'
+  }
+
+  return `${form.shooting_start_date} - ${form.shooting_end_date}`
+})
+
 function resetForm() {
   form.project_id = null
   form.project_name = ''
   form.project_type_name = ''
   form.chief_engineer_name = ''
-  form.shooting_date_range = null
+  form.shooting_start_date = ''
+  form.shooting_end_date = ''
   form.archived = false
 }
 
@@ -200,10 +246,8 @@ async function edit(item) {
   form.project_name = item.project_name
   form.project_type_name = item.type?.project_type_name || ''
   form.chief_engineer_name = item.chiefEngineer?.name || ''
-  form.shooting_date_range = {
-    start: parseDateValue(item.shooting_start_date),
-    end: parseDateValue(item.shooting_end_date)
-  }
+  form.shooting_start_date = item.shooting_start_date || ''
+  form.shooting_end_date = item.shooting_end_date || ''
   form.archived = !!item.archived
   isFormOpen.value = true
 }
@@ -213,19 +257,22 @@ function payloadFromForm() {
     project_name: form.project_name.trim(),
     project_type_name: form.project_type_name,
     chief_engineer_name: form.chief_engineer_name,
-    shooting_start_date: formatDateValue(form.shooting_date_range?.start),
-    shooting_end_date: formatDateValue(form.shooting_date_range?.end),
+    shooting_start_date: form.shooting_start_date.trim(),
+    shooting_end_date: form.shooting_end_date.trim(),
     archived: !!form.archived
   }
 }
 
 async function save() {
+  const startDate = parseDateValue(form.shooting_start_date.trim())
+  const endDate = parseDateValue(form.shooting_end_date.trim())
+
   if (
     !form.project_name.trim() ||
     !form.project_type_name ||
     !form.chief_engineer_name ||
-    !form.shooting_date_range?.start ||
-    !form.shooting_date_range?.end
+    !startDate ||
+    !endDate
   ) {
     return
   }

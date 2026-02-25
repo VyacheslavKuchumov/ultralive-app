@@ -111,8 +111,20 @@
             <UInput v-model="form.current_storage_name" size="lg" placeholder="Текущее хранение" />
           </UFormField>
 
-          <UFormField label="Дата покупки">
-            <UInputDate v-model="form.date_of_purchase_value" class="w-full" />
+          <UFormField label="Дата покупки (DatePicker)">
+            <div class="space-y-2">
+              <UPopover>
+                <UButton color="neutral" variant="soft" class="w-full justify-start">
+                  {{ purchaseDateLabel }}
+                </UButton>
+
+                <template #content>
+                  <UCalendar v-model="purchaseDateModel" />
+                </template>
+              </UPopover>
+
+              <UInput v-model="form.date_of_purchase" size="lg" placeholder="Дата покупки YYYY-MM-DD" />
+            </div>
           </UFormField>
           <UFormField label="Стоимость">
             <UInput v-model="form.cost_of_purchase" size="lg" placeholder="Стоимость" />
@@ -150,7 +162,7 @@ const form = reactive({
   warehouse_name: '',
   current_storage_name: '',
   needs_maintenance: false,
-  date_of_purchase_value: null,
+  date_of_purchase: '',
   cost_of_purchase: ''
 })
 
@@ -208,6 +220,19 @@ function formatDateValue(value) {
   return `${year}-${month}-${day}`
 }
 
+const purchaseDateModel = computed({
+  get() {
+    return parseDateValue(form.date_of_purchase)
+  },
+  set(value) {
+    form.date_of_purchase = formatDateValue(value)
+  }
+})
+
+const purchaseDateLabel = computed(() => {
+  return form.date_of_purchase || 'Выбрать дату покупки'
+})
+
 function resetForm() {
   form.equipment_id = null
   form.equipment_name = ''
@@ -216,7 +241,7 @@ function resetForm() {
   form.warehouse_name = ''
   form.current_storage_name = ''
   form.needs_maintenance = false
-  form.date_of_purchase_value = null
+  form.date_of_purchase = ''
   form.cost_of_purchase = ''
 }
 
@@ -273,7 +298,7 @@ async function edit(item) {
   form.warehouse_name = item.storage?.warehouse_name || ''
   form.current_storage_name = item.current_storage || ''
   form.needs_maintenance = item.needs_maintenance
-  form.date_of_purchase_value = parseDateValue(item.date_of_purchase || '')
+  form.date_of_purchase = item.date_of_purchase || ''
   form.cost_of_purchase = item.cost_of_purchase || ''
   isFormOpen.value = true
 }
@@ -287,7 +312,7 @@ function payloadFromForm() {
     warehouse_name: form.warehouse_name,
     current_storage_name: form.current_storage_name.trim(),
     needs_maintenance: !!form.needs_maintenance,
-    date_of_purchase: formatDateValue(form.date_of_purchase_value),
+    date_of_purchase: form.date_of_purchase.trim(),
     cost_of_purchase: form.cost_of_purchase ? Number(form.cost_of_purchase) : null
   }
 }
