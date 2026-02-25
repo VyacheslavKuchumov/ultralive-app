@@ -10,6 +10,7 @@ import (
 )
 
 type Store interface {
+	SearchProjectTypes(query types.ListQuery) ([]*types.ProjectType, int, error)
 	ListProjectTypes() ([]*types.ProjectType, error)
 	GetProjectTypeByID(id int) (*types.ProjectType, error)
 	CreateProjectType(payload types.ProjectTypePayload) ([]*types.ProjectType, error)
@@ -39,12 +40,13 @@ func (s *Service) HandleGet(w http.ResponseWriter, r *http.Request) {
 	if !crmhttp.RequireAuth(w, r) {
 		return
 	}
-	items, err := s.store.ListProjectTypes()
+	query := crmhttp.ParseListQuery(r)
+	items, total, err := s.store.SearchProjectTypes(query)
 	if err != nil {
 		crmhttp.WriteStoreError(w, err)
 		return
 	}
-	utils.WriteJSON(w, http.StatusOK, items)
+	utils.WriteJSON(w, http.StatusOK, types.NewPaginatedResponse(items, query.Page, query.PerPage, total))
 }
 
 func (s *Service) HandleGetByID(w http.ResponseWriter, r *http.Request) {

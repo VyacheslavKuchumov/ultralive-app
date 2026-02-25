@@ -10,6 +10,7 @@ import (
 )
 
 type Store interface {
+	SearchEquipmentSets(query types.ListQuery) ([]*types.EquipmentSet, int, error)
 	ListEquipmentSets() ([]*types.EquipmentSet, error)
 	GetEquipmentSetByID(id int) (*types.EquipmentSet, error)
 	CreateEquipmentSet(payload types.EquipmentSetPayload) ([]*types.EquipmentSet, error)
@@ -43,12 +44,13 @@ func (s *Service) HandleGet(w http.ResponseWriter, r *http.Request) {
 	if !crmhttp.RequireAuth(w, r) {
 		return
 	}
-	items, err := s.store.ListEquipmentSets()
+	query := crmhttp.ParseListQuery(r)
+	items, total, err := s.store.SearchEquipmentSets(query)
 	if err != nil {
 		crmhttp.WriteStoreError(w, err)
 		return
 	}
-	utils.WriteJSON(w, http.StatusOK, items)
+	utils.WriteJSON(w, http.StatusOK, types.NewPaginatedResponse(items, query.Page, query.PerPage, total))
 }
 
 func (s *Service) HandleGetByID(w http.ResponseWriter, r *http.Request) {

@@ -60,29 +60,59 @@
         <h2 class="text-lg font-semibold">Оборудование в съёмке</h2>
       </template>
 
-      <div class="overflow-x-auto">
-        <table class="w-full min-w-max text-sm">
-          <thead>
-            <tr class="text-left border-b border-gray-200 whitespace-nowrap">
-              <th class="py-2">ID</th>
-              <th class="py-2">Название</th>
-              <th class="py-2">Серия</th>
-              <th class="py-2">Комплект</th>
-              <th class="py-2 w-24">Действие</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="item in board?.equipment_in_project || []" :key="item.equipment_id" class="border-b border-gray-100">
-              <td class="py-2">{{ item.equipment_id }}</td>
-              <td class="py-2">{{ item.equipment_name }}</td>
-              <td class="py-2">{{ item.serial_number }}</td>
-              <td class="py-2">{{ item.equipment_set?.equipment_set_name || '-' }}</td>
-              <td class="py-2">
-                <UButton size="xs" color="error" variant="soft" @click="removeEquipment(item)">Удалить</UButton>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+      <div class="space-y-4">
+        <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <UInput
+            v-model="search"
+            icon="i-lucide-search"
+            placeholder="Поиск по составу съёмки"
+            class="md:max-w-sm"
+          />
+
+          <label class="flex items-center gap-2 text-sm text-gray-600">
+            На странице
+            <select v-model.number="perPage" class="rounded border border-gray-300 px-2 py-1 text-sm">
+              <option v-for="option in perPageOptions" :key="option" :value="option">{{ option }}</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full min-w-max text-sm">
+            <thead>
+              <tr class="text-left border-b border-gray-200 whitespace-nowrap">
+                <th class="py-2">ID</th>
+                <th class="py-2">Название</th>
+                <th class="py-2">Серия</th>
+                <th class="py-2">Комплект</th>
+                <th class="py-2 w-24">Действие</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="item in pagedEquipment" :key="item.equipment_id" class="border-b border-gray-100">
+                <td class="py-2">{{ item.equipment_id }}</td>
+                <td class="py-2">{{ item.equipment_name }}</td>
+                <td class="py-2">{{ item.serial_number }}</td>
+                <td class="py-2">{{ item.equipment_set?.equipment_set_name || '-' }}</td>
+                <td class="py-2">
+                  <UButton size="xs" color="error" variant="soft" @click="removeEquipment(item)">Удалить</UButton>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p v-if="!pagedEquipment.length" class="text-sm text-gray-600">Ничего не найдено.</p>
+
+        <div class="flex flex-col gap-3 border-t border-gray-100 pt-3 md:flex-row md:items-center md:justify-between">
+          <p class="text-sm text-gray-600">Показано {{ from }}-{{ to }} из {{ total }}</p>
+
+          <div class="flex items-center gap-2">
+            <UButton size="xs" color="neutral" variant="soft" :disabled="page <= 1" @click="prevPage">Назад</UButton>
+            <span class="text-sm text-gray-600">Стр. {{ page }} / {{ totalPages }}</span>
+            <UButton size="xs" color="neutral" variant="soft" :disabled="page >= totalPages" @click="nextPage">Вперед</UButton>
+          </div>
+        </div>
       </div>
     </UCard>
 
@@ -111,7 +141,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute } from '#imports'
 import { useCRMStore } from '~/stores/crm'
 
@@ -125,12 +155,80 @@ const selectedDraftId = ref(0)
 const conflictingEquipment = ref([])
 const conflictingProjects = ref([])
 
+const search = ref('')
+const page = ref(1)
+const perPage = ref(10)
+const perPageOptions = [10, 20, 50]
+
 await Promise.all([
   crm.fetchProjectBoard(projectId.value),
-  crm.fetchDrafts()
+  crm.fetchDrafts({ page: 1, per_page: 1000 })
 ])
 
 const board = computed(() => crm.projectBoard)
+
+const filteredEquipment = computed(() => {
+  const items = board.value?.equipment_in_project || []
+  const term = search.value.trim().toLowerCase()
+
+  if (!term) return items
+
+  return items.filter((item) => {
+    const values = [
+      String(item.equipment_id),
+      item.equipment_name,
+      item.serial_number,
+      item.equipment_set?.equipment_set_name || ''
+    ]
+
+    return values.some((value) => String(value).toLowerCase().includes(term))
+  })
+})
+
+const total = computed(() => filteredEquipment.value.length)
+const totalPages = computed(() => Math.max(1, Math.ceil(total.value / perPage.value)))
+
+const pagedEquipment = computed(() => {
+  const start = (page.value - 1) * perPage.value
+  const end = start + perPage.value
+  return filteredEquipment.value.slice(start, end)
+})
+
+const from = computed(() => {
+  if (!total.value) return 0
+  return (page.value - 1) * perPage.value + 1
+})
+
+const to = computed(() => {
+  if (!total.value) return 0
+  return Math.min(page.value * perPage.value, total.value)
+})
+
+watch(search, () => {
+  page.value = 1
+})
+
+watch(perPage, () => {
+  page.value = 1
+})
+
+watch(totalPages, (value) => {
+  if (page.value > value) {
+    page.value = value
+  }
+})
+
+function prevPage() {
+  if (page.value > 1) {
+    page.value -= 1
+  }
+}
+
+function nextPage() {
+  if (page.value < totalPages.value) {
+    page.value += 1
+  }
+}
 
 async function refreshBoard() {
   await crm.fetchProjectBoard(projectId.value)

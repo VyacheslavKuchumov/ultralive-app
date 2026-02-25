@@ -10,6 +10,7 @@ import (
 )
 
 type Store interface {
+	SearchWarehouses(query types.ListQuery) ([]*types.Warehouse, int, error)
 	ListWarehouses() ([]*types.Warehouse, error)
 	CreateWarehouse(payload types.WarehousePayload) ([]*types.Warehouse, error)
 	UpdateWarehouse(id int, payload types.WarehousePayload) ([]*types.Warehouse, error)
@@ -37,12 +38,13 @@ func (s *Service) HandleGet(w http.ResponseWriter, r *http.Request) {
 	if !crmhttp.RequireAuth(w, r) {
 		return
 	}
-	items, err := s.store.ListWarehouses()
+	query := crmhttp.ParseListQuery(r)
+	items, total, err := s.store.SearchWarehouses(query)
 	if err != nil {
 		crmhttp.WriteStoreError(w, err)
 		return
 	}
-	utils.WriteJSON(w, http.StatusOK, items)
+	utils.WriteJSON(w, http.StatusOK, types.NewPaginatedResponse(items, query.Page, query.PerPage, total))
 }
 
 func (s *Service) HandleCreate(w http.ResponseWriter, r *http.Request) {
