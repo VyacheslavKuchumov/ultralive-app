@@ -1,15 +1,21 @@
 import { defineConfig, devices } from '@playwright/test'
 
+function envIsTrue(value?: string) {
+  return value === '1' || value === 'true'
+}
+
+const workers = process.env.CI ? 1 : process.env.PLAYWRIGHT_WORKERS
+
 export default defineConfig({
   testDir: './e2e',
   timeout: 90_000,
   expect: {
     timeout: 10_000
   },
-  fullyParallel: false,
+  fullyParallel: envIsTrue(process.env.PLAYWRIGHT_FULLY_PARALLEL),
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  workers,
   reporter: [['list'], ['html', { open: 'never' }]],
   use: {
     baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://127.0.0.1:3000',
