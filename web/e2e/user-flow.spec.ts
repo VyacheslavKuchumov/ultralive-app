@@ -39,6 +39,14 @@ function equipmentSetCard(page: Page, text: string): Locator {
   return equipmentSetCards(page, text).first()
 }
 
+function projectCards(page: Page, text: string): Locator {
+  return page.locator('[data-testid^="project-card-"]').filter({ hasText: text })
+}
+
+function projectCard(page: Page, text: string): Locator {
+  return projectCards(page, text).first()
+}
+
 async function expectRowAbsent(page: Page, text: string) {
   await expect(rowsByText(page, text)).toHaveCount(0)
 }
@@ -284,26 +292,28 @@ async function createProject(
   await dialog.getByPlaceholder('Дата начала YYYY-MM-DD').fill(startDate)
   await dialog.getByPlaceholder('Дата конца YYYY-MM-DD').fill(endDate)
   await dialog.getByRole('button', { name: 'Создать' }).click()
-  const projectRow = rowByText(page, name)
-  await expect(projectRow).toBeVisible()
-  await expect(projectRow).toContainText(chiefEngineerName)
+  const card = projectCard(page, name)
+  await expect(card).toBeVisible()
+  await expect(card).toContainText(chiefEngineerName)
 }
 
 async function editProject(page: Page, currentName: string, nextName: string, startDate: string, endDate: string) {
   await page.goto('/projects')
-  const dialog = await openEditDialog(page, currentName)
+  await projectCard(page, currentName).getByRole('button', { name: 'Изменить' }).click()
+  const dialog = page.getByRole('dialog').last()
+  await expect(dialog).toBeVisible()
   await dialog.getByPlaceholder('Название съёмки').fill(nextName)
   await dialog.getByPlaceholder('Дата начала YYYY-MM-DD').fill(startDate)
   await dialog.getByPlaceholder('Дата конца YYYY-MM-DD').fill(endDate)
   await dialog.getByRole('button', { name: 'Сохранить' }).click()
-  await expect(rowByText(page, nextName)).toBeVisible()
-  await expectRowAbsent(page, currentName)
+  await expect(projectCard(page, nextName)).toBeVisible()
+  await expect(projectCards(page, currentName)).toHaveCount(0)
 }
 
 async function deleteProject(page: Page, name: string) {
   await page.goto('/projects')
-  await rowByText(page, name).getByRole('button', { name: 'Удалить' }).click()
-  await expectRowAbsent(page, name)
+  await projectCard(page, name).getByRole('button', { name: 'Удалить' }).click()
+  await expect(projectCards(page, name)).toHaveCount(0)
 }
 
 test.beforeAll(async () => {

@@ -10,6 +10,8 @@ import (
 )
 
 type Store interface {
+	SearchEquipment(query types.ListQuery) ([]*types.Equipment, int, error)
+	SearchEquipmentBySetID(setID int, query types.ListQuery) ([]*types.Equipment, int, error)
 	ListEquipment() ([]*types.Equipment, error)
 	ListEquipmentBySetID(setID int) ([]*types.Equipment, error)
 	GetEquipmentByID(id int) (*types.Equipment, error)
@@ -41,12 +43,13 @@ func (s *Service) HandleGet(w http.ResponseWriter, r *http.Request) {
 	if !crmhttp.RequireAuth(w, r) {
 		return
 	}
-	items, err := s.store.ListEquipment()
+	query := crmhttp.ParseListQuery(r)
+	items, total, err := s.store.SearchEquipment(query)
 	if err != nil {
 		crmhttp.WriteStoreError(w, err)
 		return
 	}
-	utils.WriteJSON(w, http.StatusOK, items)
+	utils.WriteJSON(w, http.StatusOK, types.NewPaginatedResponse(items, query.Page, query.PerPage, total))
 }
 
 func (s *Service) HandleGetBySetID(w http.ResponseWriter, r *http.Request) {
@@ -57,12 +60,13 @@ func (s *Service) HandleGetBySetID(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	items, err := s.store.ListEquipmentBySetID(id)
+	query := crmhttp.ParseListQuery(r)
+	items, total, err := s.store.SearchEquipmentBySetID(id, query)
 	if err != nil {
 		crmhttp.WriteStoreError(w, err)
 		return
 	}
-	utils.WriteJSON(w, http.StatusOK, items)
+	utils.WriteJSON(w, http.StatusOK, types.NewPaginatedResponse(items, query.Page, query.PerPage, total))
 }
 
 func (s *Service) HandleGetByID(w http.ResponseWriter, r *http.Request) {

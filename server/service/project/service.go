@@ -10,6 +10,7 @@ import (
 )
 
 type Store interface {
+	SearchProjects(archived bool, query types.ListQuery) ([]*types.Project, int, error)
 	ListProjects(archived bool) ([]*types.Project, error)
 	GetProjectByID(id int) (*types.Project, error)
 	CreateProject(payload types.ProjectPayload) ([]*types.Project, error)
@@ -40,24 +41,26 @@ func (s *Service) HandleGet(w http.ResponseWriter, r *http.Request) {
 	if !crmhttp.RequireAuth(w, r) {
 		return
 	}
-	items, err := s.store.ListProjects(false)
+	query := crmhttp.ParseListQuery(r)
+	items, total, err := s.store.SearchProjects(false, query)
 	if err != nil {
 		crmhttp.WriteStoreError(w, err)
 		return
 	}
-	utils.WriteJSON(w, http.StatusOK, items)
+	utils.WriteJSON(w, http.StatusOK, types.NewPaginatedResponse(items, query.Page, query.PerPage, total))
 }
 
 func (s *Service) HandleGetArchived(w http.ResponseWriter, r *http.Request) {
 	if !crmhttp.RequireAuth(w, r) {
 		return
 	}
-	items, err := s.store.ListProjects(true)
+	query := crmhttp.ParseListQuery(r)
+	items, total, err := s.store.SearchProjects(true, query)
 	if err != nil {
 		crmhttp.WriteStoreError(w, err)
 		return
 	}
-	utils.WriteJSON(w, http.StatusOK, items)
+	utils.WriteJSON(w, http.StatusOK, types.NewPaginatedResponse(items, query.Page, query.PerPage, total))
 }
 
 func (s *Service) HandleGetByID(w http.ResponseWriter, r *http.Request) {

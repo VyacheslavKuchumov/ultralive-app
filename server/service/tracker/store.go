@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -37,6 +38,23 @@ func (s *Store) ListSetTypes() ([]*types.SetType, error) {
 		result = append(result, item)
 	}
 	return result, rows.Err()
+}
+
+func (s *Store) SearchSetTypes(query types.ListQuery) ([]*types.SetType, int, error) {
+	items, err := s.ListSetTypes()
+	if err != nil {
+		return nil, 0, err
+	}
+
+	search := normalizeSearchQuery(query.Search)
+	filtered := make([]*types.SetType, 0, len(items))
+	for _, item := range items {
+		if matchesSearch(search, strconv.Itoa(item.SetTypeID), item.SetTypeName) {
+			filtered = append(filtered, item)
+		}
+	}
+
+	return paginateSlice(filtered, query), len(filtered), nil
 }
 
 func (s *Store) GetSetTypeByID(id int) (*types.SetType, error) {
@@ -99,6 +117,23 @@ func (s *Store) ListProjectTypes() ([]*types.ProjectType, error) {
 	return result, rows.Err()
 }
 
+func (s *Store) SearchProjectTypes(query types.ListQuery) ([]*types.ProjectType, int, error) {
+	items, err := s.ListProjectTypes()
+	if err != nil {
+		return nil, 0, err
+	}
+
+	search := normalizeSearchQuery(query.Search)
+	filtered := make([]*types.ProjectType, 0, len(items))
+	for _, item := range items {
+		if matchesSearch(search, strconv.Itoa(item.ProjectTypeID), item.ProjectTypeName, item.NeaktorID) {
+			filtered = append(filtered, item)
+		}
+	}
+
+	return paginateSlice(filtered, query), len(filtered), nil
+}
+
 func (s *Store) GetProjectTypeByID(id int) (*types.ProjectType, error) {
 	row := s.db.QueryRow(`SELECT project_type_id, project_type_name, COALESCE(neaktor_id, '') FROM project_types WHERE project_type_id = $1`, id)
 	item := new(types.ProjectType)
@@ -159,6 +194,23 @@ func (s *Store) ListWarehouses() ([]*types.Warehouse, error) {
 	return result, rows.Err()
 }
 
+func (s *Store) SearchWarehouses(query types.ListQuery) ([]*types.Warehouse, int, error) {
+	items, err := s.ListWarehouses()
+	if err != nil {
+		return nil, 0, err
+	}
+
+	search := normalizeSearchQuery(query.Search)
+	filtered := make([]*types.Warehouse, 0, len(items))
+	for _, item := range items {
+		if matchesSearch(search, strconv.Itoa(item.WarehouseID), item.WarehouseName, item.WarehouseAdress) {
+			filtered = append(filtered, item)
+		}
+	}
+
+	return paginateSlice(filtered, query), len(filtered), nil
+}
+
 func (s *Store) CreateWarehouse(payload types.WarehousePayload) ([]*types.Warehouse, error) {
 	_, err := s.db.Exec(`INSERT INTO warehouses (warehouse_name, warehouse_adress) VALUES ($1, NULLIF($2, ''))`, payload.WarehouseName, payload.WarehouseAdress)
 	if err != nil {
@@ -191,6 +243,23 @@ func (s *Store) DeleteWarehouse(id int) ([]*types.Warehouse, error) {
 
 func (s *Store) ListEquipmentSets() ([]*types.EquipmentSet, error) {
 	return s.listEquipmentSets("")
+}
+
+func (s *Store) SearchEquipmentSets(query types.ListQuery) ([]*types.EquipmentSet, int, error) {
+	items, err := s.ListEquipmentSets()
+	if err != nil {
+		return nil, 0, err
+	}
+
+	search := normalizeSearchQuery(query.Search)
+	filtered := make([]*types.EquipmentSet, 0, len(items))
+	for _, item := range items {
+		if matchesSearch(search, strconv.Itoa(item.EquipmentSetID), item.EquipmentSetName, item.Description, item.Type.SetTypeName) {
+			filtered = append(filtered, item)
+		}
+	}
+
+	return paginateSlice(filtered, query), len(filtered), nil
 }
 
 func (s *Store) GetEquipmentSetByID(id int) (*types.EquipmentSet, error) {
@@ -297,8 +366,58 @@ func (s *Store) ListEquipment() ([]*types.Equipment, error) {
 	return s.listEquipment("")
 }
 
+func (s *Store) SearchEquipment(query types.ListQuery) ([]*types.Equipment, int, error) {
+	items, err := s.ListEquipment()
+	if err != nil {
+		return nil, 0, err
+	}
+
+	search := normalizeSearchQuery(query.Search)
+	filtered := make([]*types.Equipment, 0, len(items))
+	for _, item := range items {
+		if matchesSearch(
+			search,
+			strconv.Itoa(item.EquipmentID),
+			item.EquipmentName,
+			item.SerialNumber,
+			item.Description,
+			item.EquipmentSet.EquipmentSetName,
+			item.Storage.WarehouseName,
+		) {
+			filtered = append(filtered, item)
+		}
+	}
+
+	return paginateSlice(filtered, query), len(filtered), nil
+}
+
 func (s *Store) ListEquipmentBySetID(setID int) ([]*types.Equipment, error) {
 	return s.listEquipment("WHERE e.equipment_set_id = $1", setID)
+}
+
+func (s *Store) SearchEquipmentBySetID(setID int, query types.ListQuery) ([]*types.Equipment, int, error) {
+	items, err := s.ListEquipmentBySetID(setID)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	search := normalizeSearchQuery(query.Search)
+	filtered := make([]*types.Equipment, 0, len(items))
+	for _, item := range items {
+		if matchesSearch(
+			search,
+			strconv.Itoa(item.EquipmentID),
+			item.EquipmentName,
+			item.SerialNumber,
+			item.Description,
+			item.EquipmentSet.EquipmentSetName,
+			item.Storage.WarehouseName,
+		) {
+			filtered = append(filtered, item)
+		}
+	}
+
+	return paginateSlice(filtered, query), len(filtered), nil
 }
 
 func (s *Store) GetEquipmentByID(id int) (*types.Equipment, error) {
@@ -400,6 +519,31 @@ func (s *Store) ListProjects(archived bool) ([]*types.Project, error) {
 		return nil, err
 	}
 	return result, nil
+}
+
+func (s *Store) SearchProjects(archived bool, query types.ListQuery) ([]*types.Project, int, error) {
+	items, err := s.ListProjects(archived)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	search := normalizeSearchQuery(query.Search)
+	filtered := make([]*types.Project, 0, len(items))
+	for _, item := range items {
+		if matchesSearch(
+			search,
+			strconv.Itoa(item.ProjectID),
+			item.ProjectName,
+			item.Type.ProjectTypeName,
+			item.ChiefEngineer.Name,
+			item.ShootingStartDate,
+			item.ShootingEndDate,
+		) {
+			filtered = append(filtered, item)
+		}
+	}
+
+	return paginateSlice(filtered, query), len(filtered), nil
 }
 
 func (s *Store) GetProjectByID(id int) (*types.Project, error) {
@@ -527,6 +671,31 @@ func (s *Store) ListDrafts() ([]*types.Draft, error) {
 	}
 
 	return result, nil
+}
+
+func (s *Store) SearchDrafts(query types.ListQuery) ([]*types.Draft, int, error) {
+	items, err := s.ListDrafts()
+	if err != nil {
+		return nil, 0, err
+	}
+
+	search := normalizeSearchQuery(query.Search)
+	filtered := make([]*types.Draft, 0, len(items))
+	for _, item := range items {
+		if matchesSearch(search, strconv.Itoa(item.DraftID), item.DraftName) {
+			filtered = append(filtered, item)
+			continue
+		}
+
+		for _, equipment := range item.Equipment {
+			if matchesSearch(search, equipment.EquipmentName, equipment.SerialNumber) {
+				filtered = append(filtered, item)
+				break
+			}
+		}
+	}
+
+	return paginateSlice(filtered, query), len(filtered), nil
 }
 
 func (s *Store) GetDraftByID(id int) (*types.Draft, error) {
@@ -1226,4 +1395,51 @@ func mapStoreError(err error) error {
 		return err
 	}
 	return fmt.Errorf("store error: %w", err)
+}
+
+func normalizeSearchQuery(search string) string {
+	return strings.ToLower(strings.TrimSpace(search))
+}
+
+func matchesSearch(search string, values ...string) bool {
+	if search == "" {
+		return true
+	}
+
+	for _, value := range values {
+		if strings.Contains(strings.ToLower(strings.TrimSpace(value)), search) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func paginateSlice[T any](items []T, query types.ListQuery) []T {
+	page := query.Page
+	if page < 1 {
+		page = 1
+	}
+
+	perPage := query.PerPage
+	if perPage <= 0 {
+		perPage = 10
+	}
+
+	total := len(items)
+	if total == 0 {
+		return make([]T, 0)
+	}
+
+	start := (page - 1) * perPage
+	if start >= total {
+		return make([]T, 0)
+	}
+
+	end := start + perPage
+	if end > total {
+		end = total
+	}
+
+	return items[start:end]
 }

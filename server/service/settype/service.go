@@ -10,6 +10,7 @@ import (
 )
 
 type Store interface {
+	SearchSetTypes(query types.ListQuery) ([]*types.SetType, int, error)
 	ListSetTypes() ([]*types.SetType, error)
 	GetSetTypeByID(id int) (*types.SetType, error)
 	CreateSetType(payload types.SetTypePayload) ([]*types.SetType, error)
@@ -39,12 +40,13 @@ func (s *Service) HandleGet(w http.ResponseWriter, r *http.Request) {
 	if !crmhttp.RequireAuth(w, r) {
 		return
 	}
-	items, err := s.store.ListSetTypes()
+	query := crmhttp.ParseListQuery(r)
+	items, total, err := s.store.SearchSetTypes(query)
 	if err != nil {
 		crmhttp.WriteStoreError(w, err)
 		return
 	}
-	utils.WriteJSON(w, http.StatusOK, items)
+	utils.WriteJSON(w, http.StatusOK, types.NewPaginatedResponse(items, query.Page, query.PerPage, total))
 }
 
 func (s *Service) HandleGetByID(w http.ResponseWriter, r *http.Request) {

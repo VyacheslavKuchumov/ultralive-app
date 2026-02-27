@@ -2,6 +2,12 @@ package types
 
 import "time"
 
+type ListQuery struct {
+	Search  string
+	Page    int
+	PerPage int
+}
+
 type UserStore interface {
 	GetUserByEmail(email string) (*User, error)
 	GetUserByID(id int) (*User, error)

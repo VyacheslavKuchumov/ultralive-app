@@ -3,11 +3,13 @@ package crmhttp
 import (
 	"VyacheslavKuchumov/test-backend/service/auth"
 	"VyacheslavKuchumov/test-backend/service/tracker"
+	"VyacheslavKuchumov/test-backend/types"
 	"VyacheslavKuchumov/test-backend/utils"
 	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
@@ -60,4 +62,28 @@ func WriteStoreError(w http.ResponseWriter, err error) {
 	default:
 		utils.WriteError(w, http.StatusInternalServerError, err)
 	}
+}
+
+func ParseListQuery(r *http.Request) types.ListQuery {
+	query := r.URL.Query()
+
+	page := parsePositiveInt(query.Get("page"), 1)
+	perPage := parsePositiveInt(query.Get("per_page"), 1000)
+	if perPage > 1000 {
+		perPage = 1000
+	}
+
+	return types.ListQuery{
+		Search:  strings.TrimSpace(query.Get("search")),
+		Page:    page,
+		PerPage: perPage,
+	}
+}
+
+func parsePositiveInt(raw string, fallback int) int {
+	value, err := strconv.Atoi(raw)
+	if err != nil || value <= 0 {
+		return fallback
+	}
+	return value
 }

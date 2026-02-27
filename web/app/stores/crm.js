@@ -33,6 +33,68 @@ function notifyBackendError(message) {
   })
 }
 
+function defaultPagination() {
+  return {
+    page: 1,
+    per_page: 10,
+    total: 0,
+    total_pages: 1
+  }
+}
+
+function fallbackListResponse(params = {}) {
+  const page = Number(params?.page || 1)
+  const perPage = Number(params?.per_page || 10)
+
+  return {
+    items: [],
+    pagination: {
+      page: Number.isFinite(page) && page > 0 ? page : 1,
+      per_page: Number.isFinite(perPage) && perPage > 0 ? perPage : 10,
+      total: 0,
+      total_pages: 1
+    }
+  }
+}
+
+function normalizeListResponse(response) {
+  if (response && Array.isArray(response.items)) {
+    return {
+      items: response.items,
+      pagination: {
+        ...defaultPagination(),
+        ...(response.pagination || {})
+      }
+    }
+  }
+
+  if (Array.isArray(response)) {
+    return {
+      items: response,
+      pagination: {
+        page: 1,
+        per_page: response.length || 10,
+        total: response.length,
+        total_pages: 1
+      }
+    }
+  }
+
+  return {
+    items: [],
+    pagination: defaultPagination()
+  }
+}
+
+function applyListState(store, stateKey, paginationKey, response) {
+  const normalized = normalizeListResponse(response)
+  store[stateKey] = normalized.items
+  if (paginationKey && store.pagination?.[paginationKey]) {
+    store.pagination[paginationKey] = normalized.pagination
+  }
+  return normalized.items
+}
+
 async function backendRequest(path, options = {}) {
   const auth = useAuthStore()
   const method = options.method || 'GET'
@@ -42,6 +104,7 @@ async function backendRequest(path, options = {}) {
     return await $fetch(`/api/backend${path}`, {
       method,
       body: options.body,
+      query: options.query,
       headers: auth.authHeader()
     })
   } catch (error) {
@@ -70,7 +133,17 @@ export const useCRMStore = defineStore('crm', {
     currentProject: null,
     currentDraft: null,
     projectBoard: null,
-    draftBoard: null
+    draftBoard: null,
+    pagination: {
+      setTypes: defaultPagination(),
+      projectTypes: defaultPagination(),
+      warehouses: defaultPagination(),
+      equipmentSets: defaultPagination(),
+      equipment: defaultPagination(),
+      projects: defaultPagination(),
+      archivedProjects: defaultPagination(),
+      drafts: defaultPagination()
+    }
   }),
   actions: {
     async fetchUsers() {
@@ -78,9 +151,13 @@ export const useCRMStore = defineStore('crm', {
       return this.users
     },
 
-    async fetchSetTypes() {
-      this.setTypes = await backendRequest('/set_types', { throwOnError: false, fallback: [] })
-      return this.setTypes
+    async fetchSetTypes(params = {}) {
+      const response = await backendRequest('/set_types', {
+        throwOnError: false,
+        query: params,
+        fallback: fallbackListResponse(params)
+      })
+      return applyListState(this, 'setTypes', 'setTypes', response)
     },
 
     async createSetType(payload) {
@@ -98,9 +175,13 @@ export const useCRMStore = defineStore('crm', {
       return this.setTypes
     },
 
-    async fetchProjectTypes() {
-      this.projectTypes = await backendRequest('/project_types', { throwOnError: false, fallback: [] })
-      return this.projectTypes
+    async fetchProjectTypes(params = {}) {
+      const response = await backendRequest('/project_types', {
+        throwOnError: false,
+        query: params,
+        fallback: fallbackListResponse(params)
+      })
+      return applyListState(this, 'projectTypes', 'projectTypes', response)
     },
 
     async createProjectType(payload) {
@@ -118,9 +199,13 @@ export const useCRMStore = defineStore('crm', {
       return this.projectTypes
     },
 
-    async fetchWarehouses() {
-      this.warehouses = await backendRequest('/warehouse', { throwOnError: false, fallback: [] })
-      return this.warehouses
+    async fetchWarehouses(params = {}) {
+      const response = await backendRequest('/warehouse', {
+        throwOnError: false,
+        query: params,
+        fallback: fallbackListResponse(params)
+      })
+      return applyListState(this, 'warehouses', 'warehouses', response)
     },
 
     async createWarehouse(payload) {
@@ -138,9 +223,13 @@ export const useCRMStore = defineStore('crm', {
       return this.warehouses
     },
 
-    async fetchEquipmentSets() {
-      this.equipmentSets = await backendRequest('/equipment_set', { throwOnError: false, fallback: [] })
-      return this.equipmentSets
+    async fetchEquipmentSets(params = {}) {
+      const response = await backendRequest('/equipment_set', {
+        throwOnError: false,
+        query: params,
+        fallback: fallbackListResponse(params)
+      })
+      return applyListState(this, 'equipmentSets', 'equipmentSets', response)
     },
 
     async createEquipmentSet(payload) {
@@ -158,10 +247,14 @@ export const useCRMStore = defineStore('crm', {
       return this.equipmentSets
     },
 
-    async fetchEquipment(setId = null) {
+    async fetchEquipment(setId = null, params = {}) {
       const path = setId ? `/equipment/set/${setId}` : '/equipment'
-      this.equipment = await backendRequest(path, { throwOnError: false, fallback: [] })
-      return this.equipment
+      const response = await backendRequest(path, {
+        throwOnError: false,
+        query: params,
+        fallback: fallbackListResponse(params)
+      })
+      return applyListState(this, 'equipment', 'equipment', response)
     },
 
     async createEquipment(payload) {
@@ -180,14 +273,22 @@ export const useCRMStore = defineStore('crm', {
       return this.equipment
     },
 
-    async fetchProjects() {
-      this.projects = await backendRequest('/projects', { throwOnError: false, fallback: [] })
-      return this.projects
+    async fetchProjects(params = {}) {
+      const response = await backendRequest('/projects', {
+        throwOnError: false,
+        query: params,
+        fallback: fallbackListResponse(params)
+      })
+      return applyListState(this, 'projects', 'projects', response)
     },
 
-    async fetchArchivedProjects() {
-      this.archivedProjects = await backendRequest('/projects/archived', { throwOnError: false, fallback: [] })
-      return this.archivedProjects
+    async fetchArchivedProjects(params = {}) {
+      const response = await backendRequest('/projects/archived', {
+        throwOnError: false,
+        query: params,
+        fallback: fallbackListResponse(params)
+      })
+      return applyListState(this, 'archivedProjects', 'archivedProjects', response)
     },
 
     async fetchProjectById(id) {
@@ -215,9 +316,13 @@ export const useCRMStore = defineStore('crm', {
       return this.projects
     },
 
-    async fetchDrafts() {
-      this.drafts = await backendRequest('/drafts', { throwOnError: false, fallback: [] })
-      return this.drafts
+    async fetchDrafts(params = {}) {
+      const response = await backendRequest('/drafts', {
+        throwOnError: false,
+        query: params,
+        fallback: fallbackListResponse(params)
+      })
+      return applyListState(this, 'drafts', 'drafts', response)
     },
 
     async fetchDraftById(id) {

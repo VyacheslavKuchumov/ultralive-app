@@ -12,34 +12,72 @@
     </UCard>
 
     <UCard>
-      <div class="overflow-x-auto">
-        <table class="w-full min-w-max text-sm">
-          <thead>
-            <tr class="text-left border-b border-gray-200 whitespace-nowrap">
-              <th class="py-2">ID</th>
-              <th class="py-2">Склад</th>
-              <th class="py-2">Адрес</th>
-              <th class="py-2 w-32">Действия</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="item in crm.warehouses" :key="item.warehouse_id" class="border-b border-gray-100">
-              <td class="py-2">{{ item.warehouse_id }}</td>
-              <td class="py-2">{{ item.warehouse_name }}</td>
-              <td class="py-2">{{ item.warehouse_adress || '-' }}</td>
-              <td class="py-2">
-                <div class="flex gap-1 sm:gap-2">
-                  <UButton size="xs" color="neutral" variant="soft" icon="i-lucide-pencil" aria-label="Изменить" @click="edit(item)">
-                    <span class="hidden sm:inline">Изменить</span>
-                  </UButton>
-                  <UButton size="xs" color="error" variant="soft" icon="i-lucide-trash-2" aria-label="Удалить" @click="remove(item.warehouse_id)">
-                    <span class="hidden sm:inline">Удалить</span>
-                  </UButton>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+      <div class="space-y-4">
+        <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <UInput
+            v-model="search"
+            icon="i-lucide-search"
+            placeholder="Поиск по складам"
+            class="md:max-w-sm"
+          />
+
+          <label class="flex items-center gap-2 text-sm text-gray-600">
+            На странице
+            <select v-model.number="perPage" class="rounded border border-gray-300 px-2 py-1 text-sm">
+              <option v-for="option in perPageOptions" :key="option" :value="option">{{ option }}</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full min-w-max text-sm">
+            <thead>
+              <tr class="text-left border-b border-gray-200 whitespace-nowrap">
+                <th class="py-2">ID</th>
+                <th class="py-2">Склад</th>
+                <th class="py-2">Адрес</th>
+                <th class="py-2 w-32">Действия</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="item in crm.warehouses" :key="item.warehouse_id" class="border-b border-gray-100">
+                <td class="py-2">{{ item.warehouse_id }}</td>
+                <td class="py-2">{{ item.warehouse_name }}</td>
+                <td class="py-2">{{ item.warehouse_adress || '-' }}</td>
+                <td class="py-2">
+                  <div class="flex gap-1 sm:gap-2">
+                    <UButton size="xs" color="neutral" variant="soft" icon="i-lucide-pencil" aria-label="Изменить" @click="edit(item)">
+                      <span class="hidden sm:inline">Изменить</span>
+                    </UButton>
+                    <UButton size="xs" color="error" variant="soft" icon="i-lucide-trash-2" aria-label="Удалить" @click="remove(item.warehouse_id)">
+                      <span class="hidden sm:inline">Удалить</span>
+                    </UButton>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p v-if="!crm.warehouses.length && !isLoading" class="text-sm text-gray-600">Ничего не найдено.</p>
+
+        <div class="flex flex-col gap-3 border-t border-gray-100 pt-3 md:flex-row md:items-center md:justify-between">
+          <p class="text-sm text-gray-600">Показано {{ from }}-{{ to }} из {{ pagination.total }}</p>
+
+          <div class="flex items-center gap-2">
+            <UButton size="xs" color="neutral" variant="soft" :disabled="page <= 1 || isLoading" @click="prevPage">Назад</UButton>
+            <span class="text-sm text-gray-600">Стр. {{ page }} / {{ pagination.total_pages }}</span>
+            <UButton
+              size="xs"
+              color="neutral"
+              variant="soft"
+              :disabled="page >= pagination.total_pages || isLoading"
+              @click="nextPage"
+            >
+              Вперед
+            </UButton>
+          </div>
+        </div>
       </div>
     </UCard>
 
@@ -63,11 +101,13 @@
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
+import { useServerList } from '~/composables/useServerList'
 import { useCRMStore } from '~/stores/crm'
 
 const crm = useCRMStore()
 const isFormOpen = ref(false)
+const perPageOptions = [10, 20, 50]
 
 const form = reactive({
   warehouse_id: null,
@@ -75,7 +115,22 @@ const form = reactive({
   warehouse_adress: ''
 })
 
-await crm.fetchWarehouses()
+const {
+  search,
+  page,
+  perPage,
+  isLoading,
+  pagination,
+  from,
+  to,
+  load,
+  prevPage,
+  nextPage
+} = useServerList(
+  (params) => crm.fetchWarehouses(params),
+  computed(() => crm.pagination.warehouses),
+  { perPage: 10 }
+)
 
 function resetForm() {
   form.warehouse_id = null
@@ -109,12 +164,15 @@ async function save() {
     await crm.createWarehouse(payload)
   }
 
+  await load()
   resetForm()
   isFormOpen.value = false
 }
 
 async function remove(id) {
   await crm.deleteWarehouse(id)
+  await load()
+
   if (form.warehouse_id === id) {
     resetForm()
     isFormOpen.value = false

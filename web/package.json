@@ -10,6 +10,7 @@
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "test:e2e": "playwright test",
+    "test:e2e:parallel": "PLAYWRIGHT_FULLY_PARALLEL=1 PLAYWRIGHT_WORKERS=50% playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:report": "playwright show-report",
